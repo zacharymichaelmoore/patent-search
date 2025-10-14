@@ -231,7 +231,7 @@
       }
 
       .query-label {
-        font-size: .75rem;
+        font-size: 0.75rem;
         font-weight: 600;
         color: gray;
         text-transform: uppercase;
@@ -580,11 +580,11 @@
         </div>
 
         <!-- Right Column -->
-        <div style="padding-left: 1rem;">
+        <div style="padding-left: 1rem">
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
-              <span style="cursor: default;">Related Terms</span>
+              <span style="cursor: default">Related Terms</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
                 <span>Analyzing...</span>
@@ -593,10 +593,14 @@
 
             <div id="queryBuilder">
               <div id="emptyState" class="empty-state">
-                <p style="cursor: default;">Terms will display here</p>
+                <p style="cursor: default">Terms will display here</p>
               </div>
 
-              <div id="queryPreview" class="hidden" style="padding: 1.5rem; border: 1px solid gainsboro;">
+              <div
+                id="queryPreview"
+                class="hidden"
+                style="padding: 1.5rem; border: 1px solid gainsboro"
+              >
                 <div class="query-section">
                   <div class="query-label">Devices / Technologies</div>
                   <div class="terms-container" id="deviceTechTerms"></div>
@@ -1253,23 +1257,43 @@
       function addResult(result) {
         const resultsContainer = document.getElementById("resultsContainer");
 
+        const scoreClass =
+          result.level === "High"
+            ? "score-high"
+            : result.level === "Medium"
+            ? "score-medium"
+            : "score-low";
+
+        const scoreDisplay =
+          result.score !== null && result.score !== undefined
+            ? `<span class="score-badge ${scoreClass}">${result.level} - ${result.score}/100</span>`
+            : "";
+
         const resultHTML = `
-        <div class="result-item">
-          <div class="result-title">${result.title || "Untitled Patent"}</div>
-          <div class="result-abstract" style="margin-bottom: 0.75rem;">
-            ${result.preview || result.abstract || "No abstract available"}
-          </div>
-          <div class="result-meta" style="margin-bottom: 0.5rem;">
-            <span>📄 ${result.patentNumber || "N/A"}</span>
-            <span>📅 Filed: ${result.filingDate || "N/A"}</span>
-          </div>
-          ${
-            result.googlePatentUrl
-              ? `<a href="${result.googlePatentUrl}" target="_blank" class="result-link">View Full Patent on Google Patents →</a>`
-              : ""
-          }
-        </div>
-      `;
+  <div class="result-item">
+    <div class="result-title">
+      ${result.title || "Untitled Patent"}
+      ${scoreDisplay}
+    </div>
+    <div class="result-abstract" style="margin-bottom: 0.75rem;">
+      ${result.preview || result.abstract || "No abstract available"}
+    </div>
+    ${
+      result.reason && result.reason !== "Pending"
+        ? `<div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem;"><strong>Analysis:</strong> ${result.reason}</div>`
+        : ""
+    }
+    <div class="result-meta" style="margin-bottom: 0.5rem;">
+      <span>📄 ${result.patentNumber || "N/A"}</span>
+      <span>📅 Filed: ${result.filingDate || "N/A"}</span>
+    </div>
+    ${
+      result.googlePatentUrl
+        ? `<a href="${result.googlePatentUrl}" target="_blank" class="result-link">View Full Patent on Google Patents →</a>`
+        : ""
+    }
+  </div>
+`;
         resultsContainer.insertAdjacentHTML("beforeend", resultHTML);
       }
 
