@@ -514,7 +514,7 @@
     <div class="header-content">
       <div>
         <h1>Prior Art Research Tool</h1>
-        <p class="subtitle">Secure and Instant Prior Art Research</p>
+        <p class="subtitle">Secure and Instant Research for Patent Applications</p>
       </div>
     </div>
   </header>
@@ -523,7 +523,7 @@
     <div class="grid">
       <!-- Left: Description Editor -->
       <div class="card">
-        <h2 class="card-title">Provisional Patent Description</h2>
+        <h2 class="card-title">Patent Builder</h2>
         
         <div id="promptSection">
           <label for="promptInput">Describe Your Invention</label>
@@ -540,10 +540,10 @@
         </div>
 
         <div class="input-section">
-          <label for="userDescription">Provisional Patent Description</label>
+          <label for="userDescription">Description</label>
           <textarea 
             id="userDescription" 
-            placeholder="Enter your provisional patent text or a description will be generated for you"
+            placeholder="Enter your provisional patent text or a description will be generated"
           ></textarea>
         </div>
 
@@ -556,7 +556,7 @@
         </div>
 
         <button class="btn-primary btn-large" onclick="startSearch()" id="searchButton">
-          Find Prior Art 
+          Search Prior Art 
         </button>
 
         <button class="btn-secondary btn-large hidden" onclick="downloadCSV()" id="downloadButton" style="margin-top: 0.5rem;">
@@ -571,7 +571,7 @@
         <!-- Query Builder -->
         <div class="card">
           <h2 class="card-title">
-            <span>Search Query Builder</span>
+            <span>Search Builder</span>
             <span id="extractingIndicator" class="loading-indicator hidden">
               <div class="spinner-small"></div>
               <span>Analyzing...</span>
@@ -601,7 +601,7 @@
         </div>
 
         <!-- Premium Upgrade Card -->
-        <div class="card card-premium">
+        <!-- <div class="card card-premium">
           <div class="premium-icon">🚀</div>
           <h2 class="card-title" style="color: white; justify-content: center;">
             Unlock Detailed Analysis
@@ -629,7 +629,7 @@
           <p style="text-align: center; margin-top: 1rem; font-size: 0.75rem; opacity: 0.9;">
             Secure payment via Stripe • Instant access • No subscription
           </p>
-        </div>
+        </div> -->
       </div>
     </div>
   </main>
