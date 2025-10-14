@@ -366,7 +366,7 @@
         text-transform: uppercase;
         margin-bottom: 0.5rem;
         letter-spacing: 0.05em;
-        text-align: right;
+        text-align: center;
       }
 
       .loading-indicator {
@@ -630,6 +630,16 @@
             >
               Search
             </button>
+            <p
+              id="searchStatusMessage"
+              class="hidden"
+              style="
+                text-align: center;
+                margin-top: 0.75rem;
+                color: #6b7280;
+                font-size: 0.875rem;
+              "
+            ></p>
           </div>
 
           <!-- Premium Upgrade Card -->
@@ -1125,18 +1135,39 @@
         const resultsContainer = document.getElementById("resultsContainer");
         const searchButton = document.getElementById("searchButton");
         const downloadButton = document.getElementById("downloadButton");
+        // <<< FIX 1: Get a reference to the status message element. This was missing.
+        const searchStatusMessage = document.getElementById(
+          "searchStatusMessage"
+        );
 
-        if (!resultsContainer || !searchButton || !downloadButton) {
-          console.error("Missing required elements:", {
-            resultsContainer,
-            searchButton,
-            downloadButton,
-          });
+        if (
+          !resultsContainer ||
+          !searchButton ||
+          !downloadButton ||
+          !searchStatusMessage
+        ) {
+          console.error("Missing required elements");
           alert(
             "A critical UI element is missing. Please check the console for details."
           );
           return;
         }
+
+        // 1. Reset status message from previous search
+        searchStatusMessage.classList.add("hidden");
+        searchStatusMessage.textContent = "";
+
+        // 2. Update button to show spinner and new text
+        searchButton.disabled = true;
+        searchButton.innerHTML = `
+    <div class="spinner-small"></div>
+    <span>Searching...</span>
+  `;
+        // Add flex styles to center the content
+        searchButton.style.display = "flex";
+        searchButton.style.alignItems = "center";
+        searchButton.style.justifyContent = "center";
+        searchButton.style.gap = "0.5rem";
 
         let searchQuery = "";
         const { deviceTerms, technologyTerms, subjectTerms } = currentTerms;
@@ -1169,6 +1200,12 @@
             .value.trim();
           if (!description) {
             alert("You must generate terms from invention title first.");
+            searchButton.disabled = false;
+            searchButton.innerHTML = "Search";
+            searchButton.style.display = "";
+            searchButton.style.alignItems = "";
+            searchButton.style.justifyContent = "";
+            searchButton.style.gap = "";
             return;
           }
           searchQuery = cleanTextForSearch(description);
@@ -1186,15 +1223,17 @@
         lastTopK = topK;
 
         downloadButton.classList.add("hidden");
-        searchButton.disabled = true;
-        searchButton.textContent = "Searching...";
         resultsContainer.classList.remove("hidden");
         resultsContainer.innerHTML =
           '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
 
-        let resultCount = 0; // Will now correctly count only displayed results.
+        // <<< FIX 2: This line was removed. It was overwriting the spinner.
+        // searchButton.textContent = "Searching...";
+
+        let resultCount = 0;
         let buffer = "";
-        let hasReceivedData = false; // Flag to know if we should show the "empty" state.
+        let hasReceivedData = false;
+        let error = null; // Variable to track if an error occurred
 
         try {
           const response = await fetch("/api/search", {
@@ -1224,15 +1263,10 @@
               try {
                 const data = JSON.parse(line);
                 if (!hasReceivedData) {
-                  // First time we get any data, clear the container.
                   resultsContainer.innerHTML = "";
                   hasReceivedData = true;
                 }
-
-                if (data.event === "log") {
-                  // We can optionally display logs, but for now we just make sure container is clear.
-                } else if (data.event === "result") {
-                  // addResult now filters and returns true if it displayed the result
+                if (data.event === "result") {
                   if (addResult(data.result)) {
                     resultCount++;
                   }
@@ -1243,22 +1277,45 @@
             }
             buffer = lines[lines.length - 1];
           }
-        } catch (error) {
+        } catch (err) {
+          error = err; // Store the error
           console.error("Search failed:", error);
           resultsContainer.innerHTML =
             '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
+          searchStatusMessage.textContent = "Search failed. Please try again.";
+          searchStatusMessage.classList.remove("hidden");
         } finally {
+          // <<< FIX 3: The entire 'finally' block was updated to restore the button
+          // and show the final status message. This logic was missing.
+
+          // 3. Re-enable button and restore its original content
           searchButton.disabled = false;
-          searchButton.textContent = "Search Prior Art";
-          if (resultCount > 0) {
-            downloadButton.classList.remove("hidden");
-          } else if (hasReceivedData) {
-            // If we received data but displayed no results, show the empty state message.
+          searchButton.innerHTML = "Search";
+          // Remove the dynamic styles
+          searchButton.style.display = "";
+          searchButton.style.alignItems = "";
+          searchButton.style.justifyContent = "";
+          searchButton.style.gap = "";
+
+          // 4. Update and show the status message based on results
+          if (hasReceivedData) {
+            if (resultCount > 0) {
+              searchStatusMessage.textContent = `Found ${resultCount} results with a score of 80+.`;
+              downloadButton.classList.remove("hidden");
+            } else {
+              searchStatusMessage.textContent =
+                "No results found with a score of 80 or above.";
+              resultsContainer.innerHTML =
+                '<div class="empty-state">No results found with a score of 80 or above.</div>';
+            }
+            searchStatusMessage.classList.remove("hidden");
+          } else if (!error) {
             resultsContainer.innerHTML =
-              '<div class="empty-state">No results found with a score of 80 or above.</div>';
+              '<div class="empty-state">No results were returned.</div>';
           }
         }
       }
+
       function addResult(result) {
         // Only add the result if the score is 80 or higher
         if (
