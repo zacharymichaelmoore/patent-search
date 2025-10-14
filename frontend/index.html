@@ -56,6 +56,7 @@
         font-family: auto;
         font-weight: 700;
         color: #111827;
+        line-height: 113%;
       }
 
       h2 {
@@ -65,6 +66,7 @@
       .subtitle {
         font-size: 1rem;
         color: gray;
+        font-style: italic;
       }
 
       p {
@@ -178,6 +180,7 @@
 
       .btn-primary:hover:not(:disabled) {
         background: #dcdcdc;
+        transition: all 0.1s;
       }
 
       .btn-primary:disabled {
@@ -215,8 +218,8 @@
 
       .btn-large:hover:not(:disabled) {
         background: aliceblue;
-        font-weight: 600;
         color: darkblue;
+        transition: all 0.1s;
       }
 
       .query-section {
@@ -453,11 +456,10 @@
       .empty-state {
         text-align: center;
         padding: 3rem 1rem;
-        color: #6b7280;
+        color: gray;
         font-size: 1rem;
         border: 2px dashed #e5e7eb;
         border-radius: 0.5rem;
-        background: #f9fafb;
       }
 
       .hidden {
@@ -542,7 +544,7 @@
       <div class="grid">
         <!-- Left: Description Editor -->
         <div class="card">
-          <h2 class="card-title">1. Patent Description</h2>
+          <h2 class="card-title">Description</h2>
 
           <div id="promptSection">
             <label for="promptInput">Title</label>
@@ -577,7 +579,7 @@
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
-              <span>2. Search Query</span>
+              <span>Search Query Constructor</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
                 <span>Analyzing...</span>
@@ -586,8 +588,8 @@
 
             <div id="queryBuilder">
               <div id="emptyState" class="empty-state">
-                <p>Enter description first</p>
-                <p style="margin-top: 0.5rem; font-size: 0.75rem">
+                <p>Enter description</p>
+                <p style="font-size: 0.75rem">
                   Terms will be automatically created
                 </p>
               </div>
@@ -622,7 +624,7 @@
               id="searchButton"
               style="margin-top: 1rem"
             >
-              Search Prior Art
+              Search
             </button>
           </div>
 
