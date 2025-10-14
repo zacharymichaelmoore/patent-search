@@ -19,7 +19,7 @@
       }
 
       header {
-        padding: 1rem 3rem 0rem 3rem;
+        padding: 2rem 3rem 0rem 3rem;
       }
 
       .header-content {
@@ -76,7 +76,7 @@
       main {
         max-width: 1400px;
         margin: 1rem auto;
-        padding: 1.5rem;
+        padding: 2.5rem;
         padding-top: 1rem;
       }
 
@@ -232,7 +232,7 @@
       }
 
       .query-label {
-        font-size: 1.5rem;
+        font-size: .75rem;
         font-weight: 600;
         color: gray;
         text-transform: uppercase;
@@ -243,6 +243,7 @@
 
       .terms-container {
         display: flex;
+        flex-direction: column;
         flex-wrap: nowrap;
         align-items: flex-start;
       }
@@ -584,7 +585,7 @@
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
-              <span style="cursor: default;">Search Query Constructor</span>
+              <span style="cursor: default;">Related Terms</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
                 <span>Analyzing...</span>
@@ -593,13 +594,13 @@
 
             <div id="queryBuilder">
               <div id="emptyState" class="empty-state">
-                <p style="cursor: default;">Enter description</p>
+                <p style="cursor: default;">Terms will display here</p>
                 <p style="font-size: 0.75rem; cursor: default;">
                   Terms will be automatically created
                 </p>
               </div>
 
-              <div id="queryPreview" class="hidden" style="padding: 1.5rem">
+              <div id="queryPreview" class="hidden" style="padding: 1.5rem; border: 1px solid gainsboro;">
                 <div class="query-section">
                   <div class="query-label">Devices / Technologies</div>
                   <div class="terms-container" id="deviceTechTerms"></div>
@@ -1170,7 +1171,7 @@
             .getElementById("userDescription")
             .value.trim();
           if (!description) {
-            alert("Please enter a description before searching.");
+            alert("You must generate terms from invention title first.");
             return;
           }
           searchQuery = cleanTextForSearch(description);
