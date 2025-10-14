@@ -527,10 +527,10 @@
       <div class="grid">
         <!-- Left: Description Editor -->
         <div class="card">
-          <h2 class="card-title">Patent Builder</h2>
+          <h2 class="card-title">Patent Description</h2>
 
           <div id="promptSection">
-            <label for="promptInput">Invention Title</label>
+            <label for="promptInput">Title</label>
             <div class="input-group">
               <input
                 type="text"
@@ -539,6 +539,7 @@
               />
               <button
                 class="btn-primary"
+                style="width: -webkit-fill-available; max-width: fit-content;"
                 onclick="generateDescription()"
                 id="generateBtn"
               >
@@ -548,10 +549,10 @@
           </div>
 
           <div class="input-section">
-            <label for="userDescription">Invention Description</label>
+            <label for="userDescription">Description</label>
             <textarea
               id="userDescription"
-              placeholder="Enter your provisional patent text or a description will be generated"
+              placeholder="Enter description or it will be auto-generated"
             ></textarea>
           </div>
 
@@ -572,7 +573,7 @@
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
-              <span>Search Builder</span>
+              <span>Search Query</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
                 <span>Analyzing...</span>
@@ -581,9 +582,9 @@
 
             <div id="queryBuilder">
               <div id="emptyState" class="empty-state">
-                <p>Enter or generate your invention description.</p>
+                <p>Enter description first</p>
                 <p style="margin-top: 0.5rem; font-size: 0.75rem">
-                  Terms will be automatically extracted.
+                  Terms will be automatically created
                 </p>
               </div>
 
