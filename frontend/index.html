@@ -712,7 +712,7 @@
       let currentHoverTerm = null;
       let popoverTimeout = null;
       let lastSearchQuery = "";
-      let lastTopK = 10;
+      let lastTopK = 100;
       let popoverContext = {
         mode: null, // 'hover' or 'add'
         category: null, // 'device' or 'subject'
@@ -1122,7 +1122,7 @@
           alert("Error: Could not find the 'topK' input element.");
           return;
         }
-        const topK = parseInt(topKInput.value, 10) || 10;
+        const topK = parseInt(topKInput.value, 100) || 100;
 
         const resultsContainer = document.getElementById("resultsContainer");
         const searchButton = document.getElementById("searchButton");
@@ -1194,8 +1194,9 @@
         resultsContainer.innerHTML =
           '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
 
-        let resultCount = 0;
+        let resultCount = 0; // Will now correctly count only displayed results.
         let buffer = "";
+        let hasReceivedData = false; // Flag to know if we should show the "empty" state.
 
         try {
           const response = await fetch("/api/search", {
@@ -1224,16 +1225,19 @@
 
               try {
                 const data = JSON.parse(line);
+                if (!hasReceivedData) {
+                  // First time we get any data, clear the container.
+                  resultsContainer.innerHTML = "";
+                  hasReceivedData = true;
+                }
+
                 if (data.event === "log") {
-                  if (resultCount === 0) {
-                    resultsContainer.innerHTML = `<div class="loading"><div class="spinner"></div><p>${data.message}</p></div>`;
-                  }
+                  // We can optionally display logs, but for now we just make sure container is clear.
                 } else if (data.event === "result") {
-                  if (resultCount === 0) {
-                    resultsContainer.innerHTML = "";
+                  // addResult now filters and returns true if it displayed the result
+                  if (addResult(data.result)) {
+                    resultCount++;
                   }
-                  addResult(data.result);
-                  resultCount++;
                 }
               } catch (e) {
                 console.warn("Could not parse JSON line:", line);
@@ -1250,11 +1254,23 @@
           searchButton.textContent = "Search Prior Art";
           if (resultCount > 0) {
             downloadButton.classList.remove("hidden");
+          } else if (hasReceivedData) {
+            // If we received data but displayed no results, show the empty state message.
+            resultsContainer.innerHTML =
+              '<div class="empty-state">No results found with a score of 80 or above.</div>';
           }
         }
       }
-
       function addResult(result) {
+        // Only add the result if the score is 80 or higher
+        if (
+          result.score === null ||
+          result.score === undefined ||
+          result.score < 80
+        ) {
+          return false; // Indicate that the result was not added
+        }
+
         const resultsContainer = document.getElementById("resultsContainer");
 
         const scoreClass =
@@ -1270,33 +1286,33 @@
             : "";
 
         const resultHTML = `
-  <div class="result-item">
-    <div class="result-title">
-      ${result.title || "Untitled Patent"}
-      ${scoreDisplay}
-    </div>
-    <div class="result-abstract" style="margin-bottom: 0.75rem;">
-      ${result.preview || result.abstract || "No abstract available"}
-    </div>
-    ${
-      result.reason && result.reason !== "Pending"
-        ? `<div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem;"><strong>Analysis:</strong> ${result.reason}</div>`
-        : ""
-    }
-    <div class="result-meta" style="margin-bottom: 0.5rem;">
-      <span>📄 ${result.patentNumber || "N/A"}</span>
-      <span>📅 Filed: ${result.filingDate || "N/A"}</span>
-    </div>
-    ${
-      result.googlePatentUrl
-        ? `<a href="${result.googlePatentUrl}" target="_blank" class="result-link">View Full Patent on Google Patents →</a>`
-        : ""
-    }
-  </div>
-`;
-        resultsContainer.insertAdjacentHTML("beforeend", resultHTML);
+    <div class="result-item">
+      <div class="result-title">
+        ${result.title || "Untitled Patent"}
+        ${scoreDisplay}
+      </div>
+      <div class="result-abstract" style="margin-bottom: 0.75rem;">
+        ${result.preview || result.abstract || "No abstract available"}
+      </div>
+      ${
+        result.reason && result.reason !== "Pending"
+          ? `<div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem;"><strong>Analysis:</strong> ${result.reason}</div>`
+          : ""
       }
-
+      <div class="result-meta" style="margin-bottom: 0.5rem;">
+        <span>📄 ${result.patentNumber || "N/A"}</span>
+        <span>📅 Filed: ${result.filingDate || "N/A"}</span>
+      </div>
+      ${
+        result.googlePatentUrl
+          ? `<a href="${result.googlePatentUrl}" target="_blank" class="result-link">View Full Patent on Google Patents →</a>`
+          : ""
+      }
+    </div>
+  `;
+        resultsContainer.insertAdjacentHTML("beforeend", resultHTML);
+        return true; // Indicate that the result was successfully added
+      }
       function downloadCSV() {
         const url = `/export_csv?userDescription=${encodeURIComponent(
           lastSearchQuery

@@ -163,12 +163,12 @@ async def serve_frontend(request: Request):
 async def search_api(request: Request):
     body = await request.json()
     user_description = body.get("userDescription", "")
-    top_k = int(body.get("topK", 7))
+    top_k = int(body.get("topK", 100))
     return StreamingResponse(event_stream(user_description, top_k), media_type="text/event-stream")
 
 
 @app.get("/api/search")
-async def search_stream(userDescription: str = "", topK: int = 7):
+async def search_stream(userDescription: str = "", topK: int = 100):
     """
     GET-based streaming endpoint for EventSource (used by frontend)
     """
@@ -179,7 +179,7 @@ async def search_stream(userDescription: str = "", topK: int = 7):
 
 
 @app.get("/export_csv")
-async def export_csv(query: str = Query("", alias="userDescription"), topK: int = Query(7)):
+async def export_csv(query: str = Query("", alias="userDescription"), topK: int = Query(100)):
     qvec = await asyncio.to_thread(embed_text_sync, query)
     patents = await asyncio.to_thread(qdrant_search, qvec, topK)
     output = io.StringIO()
