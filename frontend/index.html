@@ -86,7 +86,7 @@
       }
 
       .input-section {
-        margin-bottom: 1.5rem;
+        margin: 0rem 1.5rem;
       }
 
       label {
@@ -556,17 +556,6 @@
             ></textarea>
           </div>
 
-          <div class="input-section">
-            <label for="topK"> Number of Results </label>
-            <input
-              type="number"
-              id="topK"
-              value="10"
-              readonly
-              title="Free tier limited to 10 results"
-            />
-          </div>
-
           <button
             class="btn-secondary btn-large hidden"
             onclick="downloadCSV()"
@@ -612,6 +601,16 @@
                   <div class="terms-container" id="subjectTerms"></div>
                 </div>
               </div>
+            </div>
+            <div class="input-section">
+              <label for="topK"> Number of Results </label>
+              <input
+                type="number"
+                id="topK"
+                value="10"
+                readonly
+                title="Free tier limited to 10 results"
+              />
             </div>
             <button
               class="btn-primary btn-large"
