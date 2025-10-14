@@ -13,7 +13,7 @@
 
       body {
         font-family: auto;
-        background: #fff;
+        background: whitesmoke;
         color: #111827;
         line-height: 1.6;
       }
@@ -58,9 +58,17 @@
         color: #111827;
       }
 
+      h2 {
+        font-family: sans-serif;
+      }
+
       .subtitle {
         font-size: 1rem;
-        color: #6b7280;
+        color: gray;
+      }
+
+      p {
+        font-family: serif;
       }
 
       main {
@@ -109,7 +117,7 @@
         display: block;
         font-size: 1rem;
         font-weight: 500;
-        color: #374151;
+        color: gray;
         margin-bottom: 0.25rem;
       }
 
@@ -122,11 +130,11 @@
       textarea {
         width: 100%;
         padding: 0.75rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.25rem;
+        border: 1px solid ghostwhite;
+        border-radius: 0.5rem;
         font-size: 1rem;
         font-family: inherit;
-        transition: border-color 0.2s;
+        transition: border-color 0.1s;
       }
 
       textarea {
@@ -163,13 +171,13 @@
       }
 
       .btn-primary {
-        background: #9ebef3;
-        color: white;
-        border-radius: 0.25rem;
+        color: black;
+        border-radius: 0.5rem;
+        border: 1px dashed gainsboro;
       }
 
       .btn-primary:hover:not(:disabled) {
-        background: #0d2864;
+        background: #dcdcdc;
       }
 
       .btn-primary:disabled {
@@ -208,14 +216,12 @@
       .query-section {
         padding: 0.75rem;
         background: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
       }
 
       .query-label {
-        font-size: 0.75rem;
+        font-size: 1.5rem;
         font-weight: 600;
-        color: #6b7280;
+        color: gray;
         text-transform: uppercase;
         margin-bottom: 0.5rem;
         letter-spacing: 0.05em;
@@ -223,18 +229,14 @@
 
       .terms-container {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        align-items: center;
-        min-height: 2rem;
+        flex-wrap: nowrap;
+        align-items: flex-start;
       }
 
       .term-badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.375rem 0.75rem;
-        background: #e5e7eb;
-        color: #374151;
+        color: black;
         border-radius: 9999px;
         font-size: 1rem;
         position: relative;
@@ -337,18 +339,18 @@
       }
 
       .operator {
+        padding-top: 2px;
         font-size: 0.75rem;
         font-weight: 600;
-        color: #9ca3af;
+        color: gray;
         font-family: "Courier New", monospace;
       }
 
       .operator-and {
-        text-align: center;
-        padding: 0.5rem 0;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #6b7280;
+        padding-top: 2px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: gray;
         font-family: "Courier New", monospace;
       }
 
