@@ -45,7 +45,7 @@
 
       main {
         max-width: 1400px;
-        margin: 2rem auto;
+        margin: 1rem auto;
         padding: 0 1.5rem;
       }
 
@@ -353,8 +353,9 @@
 
       .results-container {
         margin-top: 1.5rem;
-        max-height: 600px;
-        overflow-y: auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1.5rem;
       }
 
       .result-item {
