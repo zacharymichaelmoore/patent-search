@@ -76,10 +76,12 @@
       main {
         max-width: 1400px;
         margin: 1rem auto;
-        padding: 0 1.5rem;
+        padding: 1.5rem;
+        padding-top: 1rem;
       }
 
       .grid {
+        padding: 1rem;
         display: grid;
         grid-template-columns: 1fr 400px;
       }
@@ -92,7 +94,7 @@
 
       .card {
         border-radius: 0.25rem;
-        padding: 1.5rem;
+        padding: 2rem 0rem;
       }
 
       .card-premium {
@@ -220,6 +222,7 @@
       .btn-large:hover:not(:disabled) {
         background: aliceblue;
         color: darkblue;
+        border: 1px dashed darkblue;
         transition: all 0.1s;
       }
 
@@ -576,7 +579,7 @@
         </div>
 
         <!-- Right Column -->
-        <div>
+        <div style="padding-left: 1rem;">
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
