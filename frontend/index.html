@@ -695,13 +695,10 @@
       let popoverTimeout = null;
       let lastSearchQuery = "";
       let lastTopK = 10;
-
-      // --- NEW --- State for the popover's context
       let popoverContext = {
         mode: null, // 'hover' or 'add'
         category: null, // 'device' or 'subject'
       };
-      // --- NEW --- Timeout for debouncing the add term input
       let addTermDebounceTimeout = null;
 
       // TODO: Replace with your actual Stripe checkout URL
@@ -851,7 +848,6 @@
           );
       }
 
-      // --- MODIFIED --- Now includes the add button logic
       function renderTerms(containerId, terms, category) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
@@ -887,7 +883,21 @@
         container.appendChild(addButton);
       }
 
-      // --- NEW --- Opens popover in 'add' mode
+      function positionPopover(targetElement) {
+        const popover = document.getElementById("termPopover");
+        if (!targetElement || !popover) return;
+
+        const rect = targetElement.getBoundingClientRect();
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+
+        const top = rect.bottom + scrollY + 10;
+        const left = rect.left + scrollX;
+
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+      }
+
       function showAddTermPopover(buttonElement, category) {
         clearTimeout(popoverTimeout);
         popoverContext = { mode: "add", category: category };
@@ -905,9 +915,7 @@
         relatedContainer.innerHTML = "";
         input.value = "";
 
-        const rect = buttonElement.getBoundingClientRect();
-        popover.style.left = `${rect.left}px`;
-        popover.style.top = `${rect.bottom + 10}px`;
+        positionPopover(buttonElement);
 
         popover.classList.add("show");
         input.focus();
@@ -942,7 +950,6 @@
         popover.addEventListener("mouseleave", hidePopover);
       }
 
-      // --- NEW --- Helper to fetch and render suggestions
       async function fetchAndDisplayRelated(term, container) {
         container.innerHTML =
           '<span style="font-size: 0.75rem; color: #9ca3af;">Loading...</span>';
@@ -968,7 +975,6 @@
         }
       }
 
-      // --- MODIFIED --- Renamed for clarity and updated
       function showHoverPopover(badgeElement, term) {
         clearTimeout(popoverTimeout);
         currentHoverTerm = term;
@@ -984,9 +990,7 @@
         hoverTitle.classList.remove("hidden");
         addSection.classList.add("hidden");
 
-        const rect = badgeElement.getBoundingClientRect();
-        popover.style.left = `${rect.left}px`;
-        popover.style.top = `${rect.bottom + 10}px`;
+        positionPopover(badgeElement);
 
         fetchAndDisplayRelated(term, relatedContainer);
 
@@ -1003,7 +1007,6 @@
         }, 200);
       }
 
-      // --- NEW --- Helper function to fetch terms for a single word
       async function fetchRelatedForSingleTerm(term) {
         if (relatedTermsCache[term]) return;
         try {
@@ -1021,14 +1024,13 @@
         }
       }
 
-      // --- MODIFIED --- Now uses the popoverContext
       function addRelatedTerm(term) {
         const allTerms = [
           ...currentTerms.deviceTerms,
           ...currentTerms.technologyTerms,
           ...currentTerms.subjectTerms,
         ];
-        if (allTerms.includes(term)) return; // Don't add duplicates
+        if (allTerms.includes(term)) return;
 
         if (popoverContext.mode === "add") {
           if (popoverContext.category === "subject") {
@@ -1049,7 +1051,6 @@
           }
         }
         updateQueryPreview();
-        // Do not hide popover in 'add' mode, so user can add more terms
         if (popoverContext.mode === "hover") {
           hidePopover();
         }
@@ -1115,10 +1116,8 @@
           subjectTerms.length > 0;
 
         if (hasExtractedTerms) {
-          console.log("Building search query from extracted terms.");
           const queryParts = [];
           const combinedTech = [...deviceTerms, ...technologyTerms];
-
           if (combinedTech.length > 0) {
             queryParts.push(
               `A patent describing a device or technology such as: ${combinedTech.join(
@@ -1126,7 +1125,6 @@
               )}.`
             );
           }
-
           if (subjectTerms.length > 0) {
             queryParts.push(
               `Applied in the subject matter or field of: ${subjectTerms.join(
@@ -1136,9 +1134,6 @@
           }
           searchQuery = queryParts.join(" ");
         } else {
-          console.warn(
-            "No extracted terms found. Using full description as fallback for search query."
-          );
           const description = document
             .getElementById("userDescription")
             .value.trim();
@@ -1157,14 +1152,12 @@
         }
 
         console.log("Final Search Query:", searchQuery);
-
         lastSearchQuery = searchQuery;
         lastTopK = topK;
 
         downloadButton.classList.add("hidden");
         searchButton.disabled = true;
         searchButton.textContent = "Searching...";
-
         resultsContainer.classList.remove("hidden");
         resultsContainer.innerHTML =
           '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
@@ -1176,10 +1169,7 @@
           const response = await fetch("/api/search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userDescription: searchQuery,
-              topK: topK,
-            }),
+            body: JSON.stringify({ userDescription: searchQuery, topK: topK }),
           });
 
           if (!response.ok) {
@@ -1203,7 +1193,6 @@
               try {
                 const data = JSON.parse(line);
                 if (data.event === "log") {
-                  console.log(data.message);
                   if (resultCount === 0) {
                     resultsContainer.innerHTML = `<div class="loading"><div class="spinner"></div><p>${data.message}</p></div>`;
                   }
@@ -1238,9 +1227,7 @@
 
         const resultHTML = `
         <div class="result-item">
-          <div class="result-title">
-            ${result.title || "Untitled Patent"}
-          </div>
+          <div class="result-title">${result.title || "Untitled Patent"}</div>
           <div class="result-abstract" style="margin-bottom: 0.75rem;">
             ${result.preview || result.abstract || "No abstract available"}
           </div>
@@ -1255,7 +1242,6 @@
           }
         </div>
       `;
-
         resultsContainer.insertAdjacentHTML("beforeend", resultHTML);
       }
 
