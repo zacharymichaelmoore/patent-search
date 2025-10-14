@@ -364,13 +364,6 @@
         border-radius: 0.5rem;
         padding: 1.25rem;
         margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s;
-      }
-
-      .result-item:hover {
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
       }
 
       .result-item:last-child {
@@ -644,16 +637,15 @@
         </div> -->
         </div>
       </div>
-      <div id="resultsContainer" class="results-container hidden">
-        <button
-          class="btn-secondary btn-large hidden"
-          onclick="downloadCSV()"
-          id="downloadButton"
-          style="margin: 0rem 0.5rem"
-        >
-          Download csv
-        </button>
-      </div>
+      <button
+        class="btn-secondary btn-large hidden"
+        onclick="downloadCSV()"
+        id="downloadButton"
+        style="margin: 0rem 0.5rem"
+      >
+        Download csv
+      </button>
+      <div id="resultsContainer" class="results-container hidden"></div>
     </main>
 
     <div id="termPopover" class="popover">
