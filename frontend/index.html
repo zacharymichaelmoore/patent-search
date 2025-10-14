@@ -248,6 +248,10 @@
         padding-left: 1.75rem;
       }
 
+      .popover .hidden {
+        display: none;
+      }
+
       .term-remove {
         position: absolute;
         left: 0.35rem;
@@ -655,8 +659,26 @@
     </main>
 
     <div id="termPopover" class="popover">
-      <div class="popover-title">Related Terms</div>
-      <div class="popover-subtitle">Click to add synonyms</div>
+      <div id="popoverHoverTitle">
+        <div class="popover-title">Related Terms</div>
+        <div class="popover-subtitle">Click to add synonyms</div>
+      </div>
+
+      <div id="popoverAddSection" class="hidden">
+        <div class="popover-title">Add New Term</div>
+        <div class="input-group">
+          <input
+            type="text"
+            id="addTermInput"
+            placeholder="Type a term..."
+            style="padding: 0.5rem"
+          />
+        </div>
+        <div class="popover-subtitle" style="margin-top: 0.5rem">
+          Suggestions will appear below. Press Enter to add.
+        </div>
+      </div>
+
       <div id="relatedTermsContainer" class="related-terms"></div>
     </div>
 
@@ -674,11 +696,18 @@
       let lastSearchQuery = "";
       let lastTopK = 10;
 
+      // --- NEW --- State for the popover's context
+      let popoverContext = {
+        mode: null, // 'hover' or 'add'
+        category: null, // 'device' or 'subject'
+      };
+      // --- NEW --- Timeout for debouncing the add term input
+      let addTermDebounceTimeout = null;
+
       // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
 
       function unlockPremium() {
-        // Redirect to Stripe checkout
         window.location.href = STRIPE_CHECKOUT_URL;
       }
 
@@ -811,7 +840,6 @@
           ...currentTerms.deviceTerms,
           ...currentTerms.technologyTerms,
         ];
-
         renderTerms("deviceTechTerms", combinedTerms, "device");
         renderTerms("subjectTerms", currentTerms.subjectTerms, "subject");
 
@@ -823,126 +851,144 @@
           );
       }
 
+      // --- MODIFIED --- Now includes the add button logic
       function renderTerms(containerId, terms, category) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
 
-        if (terms.length === 0) {
+        if (terms.length > 0) {
+          terms.forEach((term, index) => {
+            const badge = document.createElement("span");
+            badge.className = "term-badge";
+            badge.innerHTML = `<span class="term-remove" onclick="removeTerm('${term}')">×</span>${term}`;
+            badge.addEventListener("mouseenter", (e) =>
+              showHoverPopover(e.currentTarget, term)
+            );
+            badge.addEventListener("mouseleave", hidePopover);
+            container.appendChild(badge);
+
+            if (index < terms.length - 1) {
+              const operator = document.createElement("span");
+              operator.className = "operator";
+              operator.textContent = "OR";
+              container.appendChild(operator);
+            }
+          });
+        } else {
           container.innerHTML =
             '<span style="color: #9ca3af; font-size: 1rem;">No terms</span>';
-          return;
         }
 
-        terms.forEach((term, index) => {
-          const badge = document.createElement("span");
-          badge.className = "term-badge";
-          badge.innerHTML = `
-          <span class="term-remove" onclick="removeTerm('${term}')">×</span>
-          ${term}
-        `;
-
-          badge.addEventListener("mouseenter", (e) => showPopover(e, term));
-          badge.addEventListener("mouseleave", hidePopover);
-
-          container.appendChild(badge);
-
-          if (index < terms.length - 1) {
-            const operator = document.createElement("span");
-            operator.className = "operator";
-            operator.textContent = "OR";
-            container.appendChild(operator);
-          }
-        });
         const addButton = document.createElement("button");
         addButton.className = "btn-add-term";
         addButton.textContent = "+ Add";
-        addButton.onclick = () => promptAndAddTerm(category);
+        addButton.onclick = (e) =>
+          showAddTermPopover(e.currentTarget, category);
         container.appendChild(addButton);
       }
 
-      function promptAndAddTerm(category) {
-        const promptMessage =
-          category === "subject"
-            ? "Enter a new subject term:"
-            : "Enter a new device or technology term:";
-
-        const newTerm = prompt(promptMessage);
-
-        if (!newTerm || newTerm.trim() === "") {
-          return;
-        }
-
-        const trimmedTerm = newTerm.trim();
-
-        const allTerms = [
-          ...currentTerms.deviceTerms,
-          ...currentTerms.technologyTerms,
-          ...currentTerms.subjectTerms,
-        ];
-        if (allTerms.includes(trimmedTerm)) {
-          alert(`Term "${trimmedTerm}" already exists.`);
-          return;
-        }
-
-        if (category === "subject") {
-          currentTerms.subjectTerms.push(trimmedTerm);
-        } else {
-          currentTerms.deviceTerms.push(trimmedTerm);
-        }
-
-        updateQueryPreview();
-        fetchRelatedForSingleTerm(trimmedTerm);
-      }
-
-      async function fetchRelatedForSingleTerm(term) {
-        if (relatedTermsCache[term]) return;
-
-        console.log(`Fetching related terms for new term: ${term}`);
-        try {
-          const response = await fetch("/api/get-related-terms", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ terms: [term] }),
-          });
-
-          if (response.ok) {
-            const newRelated = await response.json();
-            relatedTermsCache = { ...relatedTermsCache, ...newRelated };
-            console.log(`Cached related terms for ${term}:`, newRelated[term]);
-          }
-        } catch (err) {
-          console.warn(`Failed to fetch related terms for ${term}:`, err);
-        }
-      }
-
-      function showPopover(e, term) {
+      // --- NEW --- Opens popover in 'add' mode
+      function showAddTermPopover(buttonElement, category) {
         clearTimeout(popoverTimeout);
-        currentHoverTerm = term;
+        popoverContext = { mode: "add", category: category };
 
         const popover = document.getElementById("termPopover");
+        const addSection = document.getElementById("popoverAddSection");
+        const hoverTitle = document.getElementById("popoverHoverTitle");
+        const input = document.getElementById("addTermInput");
         const relatedContainer = document.getElementById(
           "relatedTermsContainer"
         );
 
-        const rect = e.target.getBoundingClientRect();
+        hoverTitle.classList.add("hidden");
+        addSection.classList.remove("hidden");
+        relatedContainer.innerHTML = "";
+        input.value = "";
+
+        const rect = buttonElement.getBoundingClientRect();
         popover.style.left = `${rect.left}px`;
         popover.style.top = `${rect.bottom + 10}px`;
 
+        popover.classList.add("show");
+        input.focus();
+
+        input.oninput = () => {
+          clearTimeout(addTermDebounceTimeout);
+          addTermDebounceTimeout = setTimeout(() => {
+            const term = input.value.trim();
+            if (term) {
+              fetchAndDisplayRelated(term, relatedContainer);
+            } else {
+              relatedContainer.innerHTML = "";
+            }
+          }, 500);
+        };
+
+        input.onkeydown = (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const term = input.value.trim();
+            if (term) {
+              addRelatedTerm(term);
+              input.value = "";
+              relatedContainer.innerHTML = "";
+            }
+          }
+        };
+
+        popover.addEventListener("mouseenter", () =>
+          clearTimeout(popoverTimeout)
+        );
+        popover.addEventListener("mouseleave", hidePopover);
+      }
+
+      // --- NEW --- Helper to fetch and render suggestions
+      async function fetchAndDisplayRelated(term, container) {
+        container.innerHTML =
+          '<span style="font-size: 0.75rem; color: #9ca3af;">Loading...</span>';
+
+        if (!relatedTermsCache[term]) {
+          await fetchRelatedForSingleTerm(term);
+        }
+
         const related = relatedTermsCache[term] || [];
-        relatedContainer.innerHTML = "";
+        container.innerHTML = "";
 
         if (related.length === 0) {
-          relatedContainer.innerHTML =
-            '<span style="font-size: 0.75rem; color: #9ca3af;">Loading...</span>';
+          container.innerHTML =
+            '<span style="font-size: 0.75rem; color: #9ca3af;">No suggestions found.</span>';
         } else {
           related.forEach((relTerm) => {
             const badge = document.createElement("span");
             badge.className = "related-badge";
             badge.textContent = relTerm;
             badge.onclick = () => addRelatedTerm(relTerm);
-            relatedContainer.appendChild(badge);
+            container.appendChild(badge);
           });
         }
+      }
+
+      // --- MODIFIED --- Renamed for clarity and updated
+      function showHoverPopover(badgeElement, term) {
+        clearTimeout(popoverTimeout);
+        currentHoverTerm = term;
+        popoverContext = { mode: "hover" };
+
+        const popover = document.getElementById("termPopover");
+        const addSection = document.getElementById("popoverAddSection");
+        const hoverTitle = document.getElementById("popoverHoverTitle");
+        const relatedContainer = document.getElementById(
+          "relatedTermsContainer"
+        );
+
+        hoverTitle.classList.remove("hidden");
+        addSection.classList.add("hidden");
+
+        const rect = badgeElement.getBoundingClientRect();
+        popover.style.left = `${rect.left}px`;
+        popover.style.top = `${rect.bottom + 10}px`;
+
+        fetchAndDisplayRelated(term, relatedContainer);
 
         popover.classList.add("show");
         popover.addEventListener("mouseenter", () =>
@@ -957,22 +1003,56 @@
         }, 200);
       }
 
+      // --- NEW --- Helper function to fetch terms for a single word
+      async function fetchRelatedForSingleTerm(term) {
+        if (relatedTermsCache[term]) return;
+        try {
+          const response = await fetch("/api/get-related-terms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ terms: [term] }),
+          });
+          if (response.ok) {
+            const newRelated = await response.json();
+            relatedTermsCache = { ...relatedTermsCache, ...newRelated };
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch related terms for ${term}:`, err);
+        }
+      }
+
+      // --- MODIFIED --- Now uses the popoverContext
       function addRelatedTerm(term) {
-        if (currentTerms.deviceTerms.includes(currentHoverTerm)) {
-          if (!currentTerms.deviceTerms.includes(term)) {
+        const allTerms = [
+          ...currentTerms.deviceTerms,
+          ...currentTerms.technologyTerms,
+          ...currentTerms.subjectTerms,
+        ];
+        if (allTerms.includes(term)) return; // Don't add duplicates
+
+        if (popoverContext.mode === "add") {
+          if (popoverContext.category === "subject") {
+            currentTerms.subjectTerms.push(term);
+          } else {
+            // 'device'
             currentTerms.deviceTerms.push(term);
           }
-        } else if (currentTerms.technologyTerms.includes(currentHoverTerm)) {
-          if (!currentTerms.technologyTerms.includes(term)) {
-            currentTerms.technologyTerms.push(term);
-          }
-        } else if (currentTerms.subjectTerms.includes(currentHoverTerm)) {
-          if (!currentTerms.subjectTerms.includes(term)) {
+        } else {
+          // 'hover' mode
+          if (
+            currentTerms.deviceTerms.includes(currentHoverTerm) ||
+            currentTerms.technologyTerms.includes(currentHoverTerm)
+          ) {
+            currentTerms.deviceTerms.push(term);
+          } else if (currentTerms.subjectTerms.includes(currentHoverTerm)) {
             currentTerms.subjectTerms.push(term);
           }
         }
         updateQueryPreview();
-        hidePopover();
+        // Do not hide popover in 'add' mode, so user can add more terms
+        if (popoverContext.mode === "hover") {
+          hidePopover();
+        }
       }
 
       function removeTerm(term) {
@@ -989,25 +1069,18 @@
       }
 
       function cleanTextForSearch(text) {
-        return (
-          text
-            // Remove markdown headers
-            .replace(/^#+\s+/gm, "")
-            // Remove bold/italic markers
-            .replace(/\*\*/g, "")
-            .replace(/\*/g, "")
-            .replace(/__/g, "")
-            .replace(/_/g, "")
-            // Remove numbered lists markers
-            .replace(/^\d+\.\s+/gm, "")
-            // Remove bullet points
-            .replace(/^[-•]\s+/gm, "")
-            // Normalize whitespace
-            .replace(/\n\n+/g, " ")
-            .replace(/\n/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-        );
+        return text
+          .replace(/^#+\s+/gm, "")
+          .replace(/\*\*/g, "")
+          .replace(/\*/g, "")
+          .replace(/__/g, "")
+          .replace(/_/g, "")
+          .replace(/^\d+\.\s+/gm, "")
+          .replace(/^[-•]\s+/gm, "")
+          .replace(/\n\n+/g, " ")
+          .replace(/\n/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
       }
 
       async function startSearch() {
@@ -1153,7 +1226,7 @@
             '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
         } finally {
           searchButton.disabled = false;
-          searchButton.textContent = "Search Prior Art"; // Corrected text
+          searchButton.textContent = "Search Prior Art";
           if (resultCount > 0) {
             downloadButton.classList.remove("hidden");
           }
