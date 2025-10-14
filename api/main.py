@@ -129,12 +129,24 @@ async def event_stream(user_description, top_k):
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
         yield json.dumps({"event": "log", "message": "[SEARCH] Embedding complete"}) + "\n"
 
-        patents = await asyncio.to_thread(qdrant_search, qvec, top_k)
-        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(patents)} patents"}) + "\n"
+        fetch_count = max(top_k * 5, 50)
+        patents = await asyncio.to_thread(qdrant_search, qvec, fetch_count)
+        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(patents)} candidates, analyzing..."}) + "\n"
 
+        filtered_patents = []
         for i, patent in enumerate(patents):
             analysis = await asyncio.to_thread(analyze_with_ollama_sync, user_description, patent)
             patent.update(analysis)
+            
+            if patent.get("score") is not None and patent["score"] >= 80:
+                filtered_patents.append(patent)
+                
+            if len(filtered_patents) >= top_k:
+                break
+
+        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(filtered_patents)} high-relevance patents (80+ score)"}) + "\n"
+
+        for i, patent in enumerate(filtered_patents):
             yield json.dumps({"event": "result", "index": i, "result": patent}) + "\n"
 
         yield json.dumps({"event": "complete", "message": "Search complete"}) + "\n"
