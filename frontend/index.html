@@ -932,14 +932,14 @@
           }, 500);
         };
 
+        // This is the improved part
         input.onkeydown = (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
             const term = input.value.trim();
             if (term) {
               addRelatedTerm(term);
-              input.value = "";
-              relatedContainer.innerHTML = "";
+              hidePopover(); // Close the popover on success
             }
           }
         };
@@ -1030,17 +1030,23 @@
           ...currentTerms.technologyTerms,
           ...currentTerms.subjectTerms,
         ];
-        if (allTerms.includes(term)) return;
+        if (allTerms.includes(term)) {
+          return;
+        }
 
         if (popoverContext.mode === "add") {
           if (popoverContext.category === "subject") {
             currentTerms.subjectTerms.push(term);
-          } else {
-            // 'device'
+          } else if (popoverContext.category === "device") {
             currentTerms.deviceTerms.push(term);
+          } else {
+            console.error(
+              "addRelatedTerm called in 'add' mode with unknown category:",
+              popoverContext.category
+            );
+            return;
           }
-        } else {
-          // 'hover' mode
+        } else if (popoverContext.mode === "hover" && currentHoverTerm) {
           if (
             currentTerms.deviceTerms.includes(currentHoverTerm) ||
             currentTerms.technologyTerms.includes(currentHoverTerm)
@@ -1049,8 +1055,16 @@
           } else if (currentTerms.subjectTerms.includes(currentHoverTerm)) {
             currentTerms.subjectTerms.push(term);
           }
+        } else {
+          console.error(
+            "addRelatedTerm called in an unknown or invalid state:",
+            popoverContext
+          );
+          return;
         }
+
         updateQueryPreview();
+
         if (popoverContext.mode === "hover") {
           hidePopover();
         }
