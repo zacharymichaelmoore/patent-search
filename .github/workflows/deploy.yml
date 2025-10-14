@@ -1,4 +1,4 @@
-name: 🚀 Auto Deploy to VM
+name: Deploy to VM
 
 on:
   push:
@@ -9,18 +9,60 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 🔐 Setup SSH
+      - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 🛰️ Deploy to VM
+      - name: Determine if Docker rebuild is needed
+        id: check
+        run: |
+          echo "Checking if Dockerfile or requirements changed..."
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '(^Dockerfile$|^requirements\.txt$|^scripts/|^vectorization/)' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+          else
+            echo "rebuild=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to VM
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
           cd ~/patent-search
-          git pull origin main
-          docker build -t patent-app .
-          docker stop patent-app || true
-          docker rm patent-app || true
-          docker run -d -p 8091:8090 --name patent-app patent-app
+          echo "---- $(date) ----" >> deploy.log
+          echo "Pulling latest code..." >> deploy.log
+          git fetch origin main >> deploy.log 2>&1
+          git reset --hard origin/main >> deploy.log 2>&1
+          tail -n 500 deploy.log > deploy.tmp && mv deploy.tmp deploy.log
+          EOF
+
+      - name: Rebuild Docker image if needed
+        if: steps.check.outputs.rebuild == 'true'
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
+          cd ~/patent-search
+          echo "Rebuilding Docker image..." >> deploy.log
+          docker build -t patent-app . >> deploy.log 2>&1
+          echo "Restarting container..." >> deploy.log
+          docker stop patent-app >> deploy.log 2>&1 || true
+          docker rm patent-app >> deploy.log 2>&1 || true
+          docker run -d -p 8091:8090 --name patent-app patent-app >> deploy.log 2>&1
+          echo "Deployment complete (rebuild)." >> deploy.log
+          tail -n 500 deploy.log > deploy.tmp && mv deploy.tmp deploy.log
+          EOF
+
+      - name: Restart container if no rebuild needed
+        if: steps.check.outputs.rebuild == 'false'
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
+          cd ~/patent-search
+          echo "Restarting container without rebuild..." >> deploy.log
+          docker stop patent-app >> deploy.log 2>&1 || true
+          docker rm patent-app >> deploy.log 2>&1 || true
+          docker run -d -p 8091:8090 --name patent-app patent-app >> deploy.log 2>&1
+          echo "Deployment complete (no rebuild)." >> deploy.log
+          tail -n 500 deploy.log > deploy.tmp && mv deploy.tmp deploy.log
           EOF
