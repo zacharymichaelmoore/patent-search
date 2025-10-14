@@ -556,15 +556,6 @@
               style="height: 30ch"
             ></textarea>
           </div>
-
-          <button
-            class="btn-secondary btn-large hidden"
-            onclick="downloadCSV()"
-            id="downloadButton"
-            style="margin-top: 0.5rem"
-          >
-            Download csv
-          </button>
         </div>
 
         <!-- Right Column -->
@@ -653,7 +644,16 @@
         </div> -->
         </div>
       </div>
-      <div id="resultsContainer" class="results-container hidden"></div>
+      <div id="resultsContainer" class="results-container hidden">
+        <button
+          class="btn-secondary btn-large hidden"
+          onclick="downloadCSV()"
+          id="downloadButton"
+          style="margin: 0rem 0.5rem"
+        >
+          Download csv
+        </button>
+      </div>
     </main>
 
     <div id="termPopover" class="popover">
