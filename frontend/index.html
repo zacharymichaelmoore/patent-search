@@ -623,7 +623,7 @@
         </div>
       </div>
       <button
-        <!-- class="btn-secondary btn-large hidden" -->
+        class="btn-secondary btn-large hidden"
         onclick="downloadCSV()"
         id="downloadButton"
         style="margin: 0rem 1rem"
@@ -928,15 +928,26 @@
         );
       }
 
-      // --- REVISED AND FINAL startSearch FUNCTION ---
-
       async function startSearch() {
+        // --- FIX: Read topK from the input field ---
+        const topKInput = document.getElementById("topK");
+        if (!topKInput) {
+            alert("Error: Could not find the 'topK' input element.");
+            return;
+        }
+        const topK = parseInt(topKInput.value, 10) || 10;
+
+        // --- FIX: Add checks to prevent the null reference error ---
         const resultsContainer = document.getElementById("resultsContainer");
         const searchButton = document.getElementById("searchButton");
         const downloadButton = document.getElementById("downloadButton");
-        const topK = 7;
 
-        // **** START: QUERY CONSTRUCTION LOGIC ****
+        if (!resultsContainer || !searchButton || !downloadButton) {
+            console.error("Missing required elements:", { resultsContainer, searchButton, downloadButton });
+            alert("A critical UI element is missing. Please check the console for details.");
+            return;
+        }
+        
         let searchQuery = "";
         const { deviceTerms, technologyTerms, subjectTerms } = currentTerms;
         const hasExtractedTerms =
@@ -945,7 +956,6 @@
           subjectTerms.length > 0;
 
         if (hasExtractedTerms) {
-          // If we have terms, build a high-quality query from them.
           console.log("Building search query from extracted terms.");
           const queryParts = [];
           const combinedTech = [...deviceTerms, ...technologyTerms];
@@ -957,6 +967,7 @@
               )}.`
             );
           }
+
           if (subjectTerms.length > 0) {
             queryParts.push(
               `Applied in the subject matter or field of: ${subjectTerms.join(
@@ -966,7 +977,6 @@
           }
           searchQuery = queryParts.join(" ");
         } else {
-          // Fallback: If no terms were extracted, use the full description.
           console.warn(
             "No extracted terms found. Using full description as fallback for search query."
           );
@@ -979,7 +989,6 @@
           }
           searchQuery = cleanTextForSearch(description);
         }
-        // **** END: QUERY CONSTRUCTION LOGIC ****
 
         if (!searchQuery) {
           alert(
@@ -1009,7 +1018,6 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              // **** KEY CHANGE: Use the constructed searchQuery ****
               userDescription: searchQuery,
               topK: topK,
             }),
@@ -1059,7 +1067,7 @@
             '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
         } finally {
           searchButton.disabled = false;
-          searchButton.textContent = "Search for Patents";
+          searchButton.textContent = "Search Prior Art"; // Corrected text
           if (resultCount > 0) {
             downloadButton.classList.remove("hidden");
           }

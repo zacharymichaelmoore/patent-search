@@ -5,7 +5,13 @@ from fastapi.templating import Jinja2Templates
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from api.routes import extract_terms, generate_description, related_terms
-import io, csv, asyncio, json, os, re, requests
+import io
+import csv
+import asyncio
+import json
+import os
+import re
+import requests
 
 # ---- GLOBAL CONFIG ----
 app = FastAPI(title="Patent Search App")
@@ -24,11 +30,15 @@ _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
 
 # ---- HELPERS ----
+
+
 def embed_text_sync(text: str):
     return _model.encode(text).tolist()
 
+
 def qdrant_search(query_vector, top_k=10):
-    points = _qdrant.search(collection_name=QDRANT_COLLECTION, query_vector=query_vector, limit=top_k, with_payload=True)
+    points = _qdrant.search(collection_name=QDRANT_COLLECTION,
+                            query_vector=query_vector, limit=top_k, with_payload=True)
     results = []
     for p in points:
         payload = p.payload or {}
@@ -50,6 +60,7 @@ def qdrant_search(query_vector, top_k=10):
         })
     return results
 
+
 def extract_json_from_text(text):
     match = re.search(r'\{.*\}', text, re.DOTALL)
     if not match:
@@ -62,6 +73,7 @@ def extract_json_from_text(text):
             return json.loads(cleaned)
         except Exception:
             return None
+
 
 def analyze_with_ollama_sync(user_description, patent):
     prompt = f"""
@@ -109,29 +121,33 @@ No extra text.
     except Exception as e:
         return {"score": None, "level": "Unknown", "reason": f"Error: {e}"}
 
+
 async def event_stream(user_description, top_k):
     try:
         yield json.dumps({"event": "log", "message": "[SEARCH] Starting embedding..."}) + "\n"
-        
+
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
         yield json.dumps({"event": "log", "message": "[SEARCH] Embedding complete"}) + "\n"
-        
+
         patents = await asyncio.to_thread(qdrant_search, qvec, top_k)
         yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(patents)} patents"}) + "\n"
-        
+
         for i, patent in enumerate(patents):
             analysis = await asyncio.to_thread(analyze_with_ollama_sync, user_description, patent)
             patent.update(analysis)
             yield json.dumps({"event": "result", "index": i, "result": patent}) + "\n"
-        
+
         yield json.dumps({"event": "complete", "message": "Search complete"}) + "\n"
     except Exception as e:
         yield json.dumps({"event": "error", "message": str(e)}) + "\n"
 
 # ---- ROUTES ----
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.post("/api/search")
 async def search_api(request: Request):
@@ -139,6 +155,7 @@ async def search_api(request: Request):
     user_description = body.get("userDescription", "")
     top_k = int(body.get("topK", 7))
     return StreamingResponse(event_stream(user_description, top_k), media_type="text/event-stream")
+
 
 @app.get("/api/search")
 async def search_stream(userDescription: str = "", topK: int = 7):
@@ -149,6 +166,7 @@ async def search_stream(userDescription: str = "", topK: int = 7):
         event_stream(userDescription, topK),
         media_type="text/event-stream"
     )
+
 
 @app.get("/export_csv")
 async def export_csv(query: str = Query("", alias="userDescription"), topK: int = Query(7)):
@@ -161,6 +179,7 @@ async def export_csv(query: str = Query("", alias="userDescription"), topK: int 
     output.seek(0)
     headers = {"Content-Disposition": 'attachment; filename="results.csv"'}
     return StreamingResponse(output, media_type="text/csv", headers=headers)
+
 
 @app.get("/health")
 def health():
