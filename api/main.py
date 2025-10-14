@@ -141,8 +141,6 @@ async def event_stream(user_description, top_k):
     except Exception as e:
         yield json.dumps({"event": "error", "message": str(e)}) + "\n"
 
-# ---- ROUTES ----
-
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend(request: Request):
