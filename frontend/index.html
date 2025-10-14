@@ -513,8 +513,8 @@
   <header>
     <div class="header-content">
       <div>
-        <h1>AI Patent Assistant</h1>
-        <p class="subtitle">Draft provisional patents and discover prior art with AI</p>
+        <h1>Prior Art Research Tool</h1>
+        <p class="subtitle">Secure and Instant Prior Art Research</p>
       </div>
     </div>
   </header>
@@ -526,12 +526,12 @@
         <h2 class="card-title">Provisional Patent Description</h2>
         
         <div id="promptSection">
-          <label for="promptInput">Describe your invention briefly:</label>
+          <label for="promptInput">Describe Your Invention</label>
           <div class="input-group">
             <input 
               type="text" 
               id="promptInput" 
-              placeholder="e.g., a smart hamster wheel with neural implant"
+              placeholder="Enter invention title"
             />
             <button class="btn-primary" onclick="generateDescription()" id="generateBtn">
               Generate
@@ -540,23 +540,23 @@
         </div>
 
         <div class="input-section">
-          <label for="userDescription">Full description:</label>
+          <label for="userDescription">Provisional Patent Description</label>
           <textarea 
             id="userDescription" 
-            placeholder="Your full patent description will appear here..."
+            placeholder="Enter your provisional patent text or a description will be generated for you"
           ></textarea>
         </div>
 
         <div class="input-section">
           <label for="topK">
-            Number of results: 
+            Number of Results 
             <span class="free-badge">FREE TIER</span>
           </label>
           <input type="number" id="topK" value="10" readonly title="Free tier limited to 10 results">
         </div>
 
         <button class="btn-primary btn-large" onclick="startSearch()" id="searchButton">
-          🔍 Search Patents (Free)
+          Find Prior Art 
         </button>
 
         <button class="btn-secondary btn-large hidden" onclick="downloadCSV()" id="downloadButton" style="margin-top: 0.5rem;">
