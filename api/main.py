@@ -11,7 +11,7 @@ import asyncio
 import json
 import os
 import re
-import requests
+import httpx
 
 # ---- GLOBAL CONFIG ----
 app = FastAPI(title="Patent Search App")
@@ -30,7 +30,6 @@ _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
 
 # ---- HELPERS ----
-
 
 def embed_text_sync(text: str):
     return _model.encode(text).tolist()
@@ -75,7 +74,8 @@ def extract_json_from_text(text):
             return None
 
 
-def analyze_with_ollama_sync(user_description, patent):
+async def analyze_patent_with_ollama_async(client: httpx.AsyncClient, user_description: str, patent: dict):
+    """Analyzes a single patent asynchronously using httpx."""
     prompt = f"""
 You are an expert patent analyst. Analyze the following patent and return ONLY a single JSON object.
 
@@ -97,60 +97,84 @@ Respond only in JSON, following this schema:
 No extra text.
 """
     try:
-        with requests.post(
+        response = await client.post(
             OLLAMA_URL,
-            json={"model": "llama3.1:8b", "prompt": prompt, "stream": True},
-            stream=True,
-            timeout=120
-        ) as response:
-            chunks = []
-            for line in response.iter_lines(decode_unicode=True):
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                    if "response" in obj:
-                        chunks.append(obj["response"])
-                except json.JSONDecodeError:
-                    continue
-        full = "".join(chunks).strip()
-        result = extract_json_from_text(full)
-        if result and all(k in result for k in ("score", "level", "reason")):
-            return result
-        return {"score": None, "level": "Unknown", "reason": "Failed"}
+            json={
+                "model": "llama3.1:8b",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=120.0
+        )
+        response.raise_for_status()
+
+        full_response_text = response.json().get("response", "")
+        analysis_json = extract_json_from_text(full_response_text)
+
+        if analysis_json and all(k in analysis_json for k in ("score", "level", "reason")):
+            patent.update(analysis_json)
+        else:
+            patent.update({"score": None, "level": "Unknown",
+                          "reason": "Failed to parse analysis."})
+
+        return patent
+
+    except httpx.RequestError as e:
+        print(f"Error analyzing patent {patent.get('patentNumber')}: {e}")
+        patent.update({"score": None, "level": "Unknown",
+                      "reason": f"Analysis timed out or failed: {e}"})
+        return patent
     except Exception as e:
-        return {"score": None, "level": "Unknown", "reason": f"Error: {e}"}
+        print(
+            f"General error analyzing patent {patent.get('patentNumber')}: {e}")
+        patent.update({"score": None, "level": "Unknown",
+                      "reason": f"An unexpected error occurred: {e}"})
+        return patent
 
 
 async def event_stream(user_description, top_k):
     try:
         yield json.dumps({"event": "log", "message": "[SEARCH] Starting embedding..."}) + "\n"
-
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
-        yield json.dumps({"event": "log", "message": "[SEARCH] Embedding complete"}) + "\n"
 
+        yield json.dumps({"event": "log", "message": "[SEARCH] Finding candidate patents..."}) + "\n"
+        # Fetch more candidates to filter from
         fetch_count = max(top_k * 5, 50)
         patents = await asyncio.to_thread(qdrant_search, qvec, fetch_count)
-        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(patents)} candidates, analyzing..."}) + "\n"
 
-        filtered_patents = []
-        for i, patent in enumerate(patents):
-            analysis = await asyncio.to_thread(analyze_with_ollama_sync, user_description, patent)
-            patent.update(analysis)
-            
-            if patent.get("score") is not None and patent["score"] >= 80:
-                filtered_patents.append(patent)
-                
-            if len(filtered_patents) >= top_k:
-                break
+        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(patents)} candidates, analyzing in parallel..."}) + "\n"
 
-        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(filtered_patents)} high-relevance patents (80+ score)"}) + "\n"
+        analyzed_patents = []
+        async with httpx.AsyncClient() as client:
+            tasks = [
+                analyze_patent_with_ollama_async(
+                    client, user_description, patent)
+                for patent in patents
+            ]
 
-        for i, patent in enumerate(filtered_patents):
+            analyzed_patents = await asyncio.gather(*tasks)
+
+        high_relevance_patents = [
+            p for p in analyzed_patents
+            if p.get("score") is not None and p["score"] >= 80
+        ]
+
+        high_relevance_patents.sort(
+            key=lambda x: x.get('score', 0), reverse=True)
+
+        final_patents = high_relevance_patents[:top_k]
+
+        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {len(final_patents)} high-relevance patents (80+ score)"}) + "\n"
+
+        for i, patent in enumerate(final_patents):
             yield json.dumps({"event": "result", "index": i, "result": patent}) + "\n"
+            await asyncio.sleep(0.01)
 
         yield json.dumps({"event": "complete", "message": "Search complete"}) + "\n"
+
     except Exception as e:
+        import traceback
+        print(f"Error in event_stream: {traceback.format_exc()}")
         yield json.dumps({"event": "error", "message": str(e)}) + "\n"
 
 

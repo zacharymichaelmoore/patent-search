@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 fastmcp
 qdrant-client>=1.9.0
-requests
+httpx
 tqdm
 google-cloud-secret-manager
 sentence-transformers==2.2.2
