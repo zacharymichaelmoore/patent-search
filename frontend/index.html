@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Patent Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      line-height: 1.6;
+    }
+
+    header {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 1rem 1.5rem;
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card-premium {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      margin-top: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .input-section {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      background: #f9fafb;
+      cursor: not-allowed;
+    }
+
+    .free-badge {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      margin-left: 0.5rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2563eb;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: white;
+      border: 1px solid #d1d5db;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn-premium {
+      background: white;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.875rem 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .btn-premium:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    .btn-large {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+    }
+
+    .query-section {
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+
+    .query-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    .terms-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      min-height: 2rem;
+    }
+
+    .term-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.375rem 0.75rem;
+      background: #e5e7eb;
+      color: #374151;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .term-badge:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      padding-left: 1.75rem;
+    }
+
+    .term-remove {
+      position: absolute;
+      left: 0.35rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .term-badge:hover .term-remove {
+      opacity: 1;
+    }
+
+    .term-remove:hover {
+      color: #ef4444;
+    }
+
+    .popover {
+      position: absolute;
+      z-index: 1000;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+      display: none;
+    }
+
+    .popover.show {
+      display: block;
+    }
+
+    .popover-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .popover-subtitle {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 0.75rem;
+    }
+
+    .related-terms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .related-badge {
+      padding: 0.25rem 0.6rem;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      padding-left: 1.5rem;
+    }
+
+    .related-badge:hover {
+      background: #f0f9ff;
+      border-color: #3b82f6;
+      transform: scale(1.05);
+    }
+
+    .related-badge::before {
+      content: '+';
+      position: absolute;
+      left: 0.4rem;
+      font-weight: bold;
+      color: #3b82f6;
+    }
+
+    .operator {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #9ca3af;
+      font-family: 'Courier New', monospace;
+    }
+
+    .operator-and {
+      text-align: center;
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #6b7280;
+      font-family: 'Courier New', monospace;
+    }
+
+    .loading-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .spinner-small {
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .results-container {
+      margin-top: 1.5rem;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .result-item {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+
+    .result-item:hover {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+
+    .result-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-title {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-abstract {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .result-link {
+      color: #3b82f6;
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+
+    .result-link:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 2rem;
+      height: 2rem;
+      border: 3px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #6b7280;
+      font-size: 0.875rem;
+      border: 2px dashed #e5e7eb;
+      border-radius: 0.5rem;
+      background: #f9fafb;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .score-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    .score-low { background: #dbeafe; color: #1e40af; }
+    .score-medium { background: #fef3c7; color: #92400e; }
+    .score-high { background: #fecaca; color: #991b1b; }
+
+    #promptSection {
+      background: #f0f9ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Premium Card Styles */
+    .premium-icon {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .premium-price {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 1rem 0;
+    }
+
+    .premium-price small {
+      font-size: 1rem;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
+    .premium-features {
+      list-style: none;
+      margin: 1.5rem 0;
+    }
+
+    .premium-features li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .premium-features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+      color: #a5f3fc;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div>
+        <h1>AI Patent Assistant</h1>
+        <p class="subtitle">Draft provisional patents and discover prior art with AI</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- Left: Description Editor -->
+      <div class="card">
+        <h2 class="card-title">Provisional Patent Description</h2>
+        
+        <div id="promptSection">
+          <label for="promptInput">Describe your invention briefly:</label>
+          <div class="input-group">
+            <input 
+              type="text" 
+              id="promptInput" 
+              placeholder="e.g., a smart hamster wheel with neural implant"
+            />
+            <button class="btn-primary" onclick="generateDescription()" id="generateBtn">
+              Generate
+            </button>
+          </div>
+        </div>
+
+        <div class="input-section">
+          <label for="userDescription">Full description:</label>
+          <textarea 
+            id="userDescription" 
+            placeholder="Your full patent description will appear here..."
+          ></textarea>
+        </div>
+
+        <div class="input-section">
+          <label for="topK">
+            Number of results: 
+            <span class="free-badge">FREE TIER</span>
+          </label>
+          <input type="number" id="topK" value="10" readonly title="Free tier limited to 10 results">
+        </div>
+
+        <button class="btn-primary btn-large" onclick="startSearch()" id="searchButton">
+          🔍 Search Patents (Free)
+        </button>
+
+        <button class="btn-secondary btn-large hidden" onclick="downloadCSV()" id="downloadButton" style="margin-top: 0.5rem;">
+          📥 Download Basic CSV
+        </button>
+
+        <div id="resultsContainer" class="results-container hidden"></div>
+      </div>
+
+      <!-- Right Column -->
+      <div>
+        <!-- Query Builder -->
+        <div class="card">
+          <h2 class="card-title">
+            <span>Search Query Builder</span>
+            <span id="extractingIndicator" class="loading-indicator hidden">
+              <div class="spinner-small"></div>
+              <span>Analyzing...</span>
+            </span>
+          </h2>
+          
+          <div id="queryBuilder">
+            <div id="emptyState" class="empty-state">
+              <p>Enter or generate your invention description.</p>
+              <p style="margin-top: 0.5rem; font-size: 0.75rem;">Terms will be automatically extracted.</p>
+            </div>
+
+            <div id="queryPreview" class="hidden">
+              <div class="query-section">
+                <div class="query-label">Devices / Technologies</div>
+                <div class="terms-container" id="deviceTechTerms"></div>
+              </div>
+
+              <div id="andOperator" class="operator-and hidden">AND</div>
+
+              <div class="query-section" id="subjectSection">
+                <div class="query-label">Subjects</div>
+                <div class="terms-container" id="subjectTerms"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Premium Upgrade Card -->
+        <div class="card card-premium">
+          <div class="premium-icon">🚀</div>
+          <h2 class="card-title" style="color: white; justify-content: center;">
+            Unlock Detailed Analysis
+          </h2>
+          
+          <div class="premium-price">
+            $19.99
+            <small>one-time</small>
+          </div>
+
+          <ul class="premium-features">
+            <li><strong>AI-Powered Risk Scoring</strong> - Each patent analyzed with similarity scores (0-100)</li>
+            <li><strong>Risk Level Classification</strong> - Low/Medium/High/Critical ratings for quick triage</li>
+            <li><strong>Expert Reasoning</strong> - AI explains WHY each patent is relevant to your invention</li>
+            <li><strong>Unlimited Results</strong> - Search up to 2,000 patents (vs 10 free)</li>
+            <li><strong>Detailed CSV Export</strong> - Download comprehensive report with all analysis</li>
+            <li><strong>Google Patents Links</strong> - Direct links to full patent documents</li>
+            <li><strong>Priority Support</strong> - Get help from our patent search experts</li>
+          </ul>
+
+          <button class="btn-premium btn-large" onclick="unlockPremium()">
+            🔓 Unlock Full Analysis - $19.99
+          </button>
+
+          <p style="text-align: center; margin-top: 1rem; font-size: 0.75rem; opacity: 0.9;">
+            Secure payment via Stripe • Instant access • No subscription
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="termPopover" class="popover">
+    <div class="popover-title">Related Terms</div>
+    <div class="popover-subtitle">Click to add synonyms</div>
+    <div id="relatedTermsContainer" class="related-terms"></div>
+  </div>
+
+  <script>
+    let eventSource = null;
+    let extractTimeout = null;
+    let currentTerms = {
+      deviceTerms: [],
+      technologyTerms: [],
+      subjectTerms: []
+    };
+    let relatedTermsCache = {};
+    let currentHoverTerm = null;
+    let popoverTimeout = null;
+    let lastSearchQuery = '';
+    let lastTopK = 10;
+
+    // TODO: Replace with your actual Stripe checkout URL
+    const STRIPE_CHECKOUT_URL = 'https://buy.stripe.com/YOUR_CHECKOUT_LINK';
+
+    function unlockPremium() {
+      // Redirect to Stripe checkout
+      window.location.href = STRIPE_CHECKOUT_URL;
+    }
+
+    async function generateDescription() {
+      const prompt = document.getElementById('promptInput').value.trim();
+      const textarea = document.getElementById('userDescription');
+      const btn = document.getElementById('generateBtn');
+
+      if (!prompt) {
+        alert('Please enter a brief description of your invention.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      textarea.value = '';
+
+      try {
+        const response = await fetch('/api/generate-description', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textarea.value += decoder.decode(value);
+          textarea.scrollTop = textarea.scrollHeight;
+        }
+
+        extractTerms(textarea.value);
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Failed to generate description');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+      }
+    }
+
+    document.getElementById('userDescription').addEventListener('input', (e) => {
+      clearTimeout(extractTimeout);
+      extractTimeout = setTimeout(() => {
+        extractTerms(e.target.value);
+      }, 2000);
+    });
+
+    async function extractTerms(text) {
+      if (!text || text.trim().length < 20) {
+        currentTerms = { deviceTerms: [], technologyTerms: [], subjectTerms: [] };
+        updateQueryPreview();
+        return;
+      }
+
+      document.getElementById('extractingIndicator').classList.remove('hidden');
+
+      try {
+        const response = await fetch('/api/extract-terms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentText: text })
+        });
+
+        if (response.ok) {
+          currentTerms = await response.json();
+          updateQueryPreview();
+          preloadRelatedTerms();
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        document.getElementById('extractingIndicator').classList.add('hidden');
+      }
+    }
+
+    async function preloadRelatedTerms() {
+      const allTerms = [
+        ...currentTerms.deviceTerms,
+        ...currentTerms.technologyTerms,
+        ...currentTerms.subjectTerms
+      ];
+
+      const termsToFetch = allTerms.filter(t => !relatedTermsCache[t]);
+      if (termsToFetch.length === 0) return;
+
+      try {
+        const response = await fetch('/api/get-related-terms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ terms: termsToFetch })
+        });
+
+        if (response.ok) {
+          const newRelated = await response.json();
+          relatedTermsCache = { ...relatedTermsCache, ...newRelated };
+        }
+      } catch (err) {
+        console.warn('Failed to fetch related terms:', err);
+      }
+    }
+
+    function updateQueryPreview() {
+      const hasTerms = currentTerms.deviceTerms.length > 0 || 
+                       currentTerms.technologyTerms.length > 0 || 
+                       currentTerms.subjectTerms.length > 0;
+
+      document.getElementById('emptyState').classList.toggle('hidden', hasTerms);
+      document.getElementById('queryPreview').classList.toggle('hidden', !hasTerms);
+
+      const combinedTerms = [...currentTerms.deviceTerms, ...currentTerms.technologyTerms];
+      renderTerms('deviceTechTerms', combinedTerms);
+      renderTerms('subjectTerms', currentTerms.subjectTerms);
+
+      document.getElementById('andOperator').classList.toggle('hidden', 
+        combinedTerms.length === 0 || currentTerms.subjectTerms.length === 0);
+    }
+
+    function renderTerms(containerId, terms) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (terms.length === 0) {
+        container.innerHTML = '<span style="color: #9ca3af; font-size: 0.875rem;">No terms</span>';
+        return;
+      }
+
+      terms.forEach((term, index) => {
+        const badge = document.createElement('span');
+        badge.className = 'term-badge';
+        badge.innerHTML = `
+          <span class="term-remove" onclick="removeTerm('${term}')">×</span>
+          ${term}
+        `;
+        
+        badge.addEventListener('mouseenter', (e) => showPopover(e, term));
+        badge.addEventListener('mouseleave', hidePopover);
+        
+        container.appendChild(badge);
+
+        if (index < terms.length - 1) {
+          const operator = document.createElement('span');
+          operator.className = 'operator';
+          operator.textContent = 'OR';
+          container.appendChild(operator);
+        }
+      });
+    }
+
+    function showPopover(e, term) {
+      clearTimeout(popoverTimeout);
+      currentHoverTerm = term;
+      
+      const popover = document.getElementById('termPopover');
+      const relatedContainer = document.getElementById('relatedTermsContainer');
+      
+      const rect = e.target.getBoundingClientRect();
+      popover.style.left = `${rect.left}px`;
+      popover.style.top = `${rect.bottom + 10}px`;
+      
+      const related = relatedTermsCache[term] || [];
+      relatedContainer.innerHTML = '';
+      
+      if (related.length === 0) {
+        relatedContainer.innerHTML = '<span style="font-size: 0.75rem; color: #9ca3af;">Loading...</span>';
+      } else {
+        related.forEach(relTerm => {
+          const badge = document.createElement('span');
+          badge.className = 'related-badge';
+          badge.textContent = relTerm;
+          badge.onclick = () => addRelatedTerm(relTerm);
+          relatedContainer.appendChild(badge);
+        });
+      }
+      
+      popover.classList.add('show');
+      popover.addEventListener('mouseenter', () => clearTimeout(popoverTimeout));
+      popover.addEventListener('mouseleave', hidePopover);
+    }
+
+    function hidePopover() {
+      popoverTimeout = setTimeout(() => {
+        document.getElementById('termPopover').classList.remove('show');
+      }, 200);
+    }
+
+    function addRelatedTerm(term) {
+      if (currentTerms.deviceTerms.includes(currentHoverTerm)) {
+        if (!currentTerms.deviceTerms.includes(term)) {
+          currentTerms.deviceTerms.push(term);
+        }
+      } else if (currentTerms.technologyTerms.includes(currentHoverTerm)) {
+        if (!currentTerms.technologyTerms.includes(term)) {
+          currentTerms.technologyTerms.push(term);
+        }
+      } else if (currentTerms.subjectTerms.includes(currentHoverTerm)) {
+        if (!currentTerms.subjectTerms.includes(term)) {
+          currentTerms.subjectTerms.push(term);
+        }
+      }
+      updateQueryPreview();
+      hidePopover();
+    }
+
+    function removeTerm(term) {
+      currentTerms.deviceTerms = currentTerms.deviceTerms.filter(t => t !== term);
+      currentTerms.technologyTerms = currentTerms.technologyTerms.filter(t => t !== term);
+      currentTerms.subjectTerms = currentTerms.subjectTerms.filter(t => t !== term);
+      updateQueryPreview();
+    }
+    // Helper function to clean markdown/formatting from text
+function cleanTextForSearch(text) {
+  return text
+    // Remove markdown headers
+    .replace(/^#+\s+/gm, '')
+    // Remove bold/italic markers
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/__/g, '')
+    .replace(/_/g, '')
+    // Remove numbered lists markers
+    .replace(/^\d+\.\s+/gm, '')
+    // Remove bullet points
+    .replace(/^[-•]\s+/gm, '')
+    // Normalize whitespace
+    .replace(/\n\n+/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// --- REVISED AND FINAL startSearch FUNCTION ---
+
+async function startSearch() {
+  const resultsContainer = document.getElementById('resultsContainer');
+  const searchButton = document.getElementById('searchButton');
+  const downloadButton = document.getElementById('downloadButton');
+  const topK = 7;
+  
+  // **** START: QUERY CONSTRUCTION LOGIC ****
+  let searchQuery = '';
+  const { deviceTerms, technologyTerms, subjectTerms } = currentTerms;
+  const hasExtractedTerms = deviceTerms.length > 0 || technologyTerms.length > 0 || subjectTerms.length > 0;
+
+  if (hasExtractedTerms) {
+    // If we have terms, build a high-quality query from them.
+    console.log("Building search query from extracted terms.");
+    const queryParts = [];
+    const combinedTech = [...deviceTerms, ...technologyTerms];
+
+    if (combinedTech.length > 0) {
+      queryParts.push(`A patent describing a device or technology such as: ${combinedTech.join(' or ')}.`);
+    }
+    if (subjectTerms.length > 0) {
+      queryParts.push(`Applied in the subject matter or field of: ${subjectTerms.join(' or ')}.`);
+    }
+    searchQuery = queryParts.join(' ');
+  } else {
+    // Fallback: If no terms were extracted, use the full description.
+    console.warn("No extracted terms found. Using full description as fallback for search query.");
+    const description = document.getElementById('userDescription').value.trim();
+    if (!description) {
+        alert('Please enter a description before searching.');
+        return;
+    }
+    searchQuery = cleanTextForSearch(description);
+  }
+  // **** END: QUERY CONSTRUCTION LOGIC ****
+
+  if (!searchQuery) {
+    alert('Could not build a search query. Please check your description.');
+    return;
+  }
+
+  console.log("Final Search Query:", searchQuery);
+
+  lastSearchQuery = searchQuery;
+  lastTopK = topK;
+
+  downloadButton.classList.add('hidden');
+  searchButton.disabled = true;
+  searchButton.textContent = 'Searching...';
+
+  resultsContainer.classList.remove('hidden');
+  resultsContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
+
+  let resultCount = 0;
+  let buffer = '';
+
+  try {
+    const response = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        // **** KEY CHANGE: Use the constructed searchQuery ****
+        userDescription: searchQuery,
+        topK: topK
+      })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trim();
+        if (line === '') continue;
+
+        try {
+          const data = JSON.parse(line);
+          if (data.event === 'log') {
+            console.log(data.message);
+            if (resultCount === 0) {
+              resultsContainer.innerHTML = `<div class="loading"><div class="spinner"></div><p>${data.message}</p></div>`;
+            }
+          } else if (data.event === 'result') {
+            if (resultCount === 0) {
+              resultsContainer.innerHTML = ''; 
+            }
+            addResult(data.result);
+            resultCount++;
+          }
+        } catch (e) {
+            console.warn("Could not parse JSON line:", line);
+        }
+      }
+      buffer = lines[lines.length - 1];
+    }
+
+  } catch (error) {
+    console.error('Search failed:', error);
+    resultsContainer.innerHTML = '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
+  } finally {
+    searchButton.disabled = false;
+    searchButton.textContent = '🔍 Search Patents (Free)';
+    if (resultCount > 0) {
+      downloadButton.classList.remove('hidden');
+    }
+  }
+}
+
+    function addResult(result) {
+      const resultsContainer = document.getElementById('resultsContainer');
+      
+      const resultHTML = `
+        <div class="result-item">
+          <div class="result-title">
+            ${result.title || 'Untitled Patent'}
+          </div>
+          <div class="result-abstract" style="margin-bottom: 0.75rem;">
+            ${result.preview || result.abstract || 'No abstract available'}
+          </div>
+          <div class="result-meta" style="margin-bottom: 0.5rem;">
+            <span>📄 ${result.patentNumber || 'N/A'}</span>
+            <span>📅 Filed: ${result.filingDate || 'N/A'}</span>
+          </div>
+          ${result.googlePatentUrl ? `<a href="${result.googlePatentUrl}" target="_blank" class="result-link">View Full Patent on Google Patents →</a>` : ''}
+        </div>
+      `;
+
+      resultsContainer.insertAdjacentHTML('beforeend', resultHTML);
+    }
+
+    function downloadCSV() {
+      const url = `/export_csv?userDescription=${encodeURIComponent(lastSearchQuery)}&topK=${lastTopK}`;
+      window.open(url, '_blank');
+    }
+
+    document.getElementById('promptInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        generateDescription();
+      }
+    });
+
+    document.getElementById('userDescription').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        startSearch();
+      }
+    });
+  </script>
+</body>
+</html>

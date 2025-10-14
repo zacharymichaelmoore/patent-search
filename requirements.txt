@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+fastmcp
+qdrant-client>=1.9.0
+requests
+tqdm
+google-cloud-secret-manager
+sentence-transformers==2.2.2
+huggingface-hub<0.21

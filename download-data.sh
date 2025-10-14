@@ -1,0 +1,332 @@
+#!/usr/bin/env bash
+# Usage:
+#   ./download-data.sh <JURISDICTION> <YEAR>
+#
+# Examples:
+#   ./download-data.sh uspto 2024
+#   ./download-data.sh epo 2023
+#   ./download-data.sh cnipa 2022
+#
+# Arguments:
+#   <JURISDICTION>   The data source (e.g., uspto, epo, cnipa)
+#   <YEAR>           The year of data to download
+#
+# Notes:
+#   - The script automatically handles per-jurisdiction directories.
+#   - API key is loaded from environment or Google Secret Manager.
+#   - Global download logs are written to /mnt/storage_pool/download_state/.
+
+set -euo pipefail
+
+# ============================================================================
+# GLOBAL CONFIGURATION
+# ============================================================================
+
+GLOBAL_STATE_DIR="/mnt/storage_pool/download_state"
+GLOBAL_LOG="$GLOBAL_STATE_DIR/global_download_log.txt"
+mkdir -p "$GLOBAL_STATE_DIR"
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+record_global_state() {
+    local year=$1
+    local month=$2
+    local source=$(echo "$JURISDICTION" | tr '[:lower:]' '[:upper:]')
+    local entry="${year}-${month}   ${source}"
+    
+    if ! grep -Fxq "$entry" "$GLOBAL_LOG" 2>/dev/null; then
+        echo "$entry" >> "$GLOBAL_LOG"
+    fi
+}
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+is_completed() {
+    grep -Fxq "$1" "$STATE_FILE"
+}
+
+mark_completed() {
+    echo "$1" >> "$STATE_FILE"
+}
+
+validate_tar() {
+    local tarfile=$1
+    
+    if tar -tf "$tarfile" >/dev/null 2>&1; then
+        return 0
+    elif tar -tzf "$tarfile" >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# ============================================================================
+# ARGUMENT VALIDATION
+# ============================================================================
+
+if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+    echo "Usage: $0 <JURISDICTION> <YEAR>"
+    echo "Example: $0 uspto 2024"
+    exit 1
+fi
+
+JURISDICTION=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+YEAR=$2
+
+# ============================================================================
+# USPTO API KEY SETUP
+# ============================================================================
+
+if [ -z "${USPTO_API_KEY:-}" ]; then
+    echo "[INFO] USPTO_API_KEY not found in environment. Loading from Google Secret Manager..."
+    
+    if command -v gcloud >/dev/null 2>&1; then
+        USPTO_API_KEY=$(gcloud secrets versions access latest --secret="USPTO_API_KEY" 2>/dev/null)
+        
+        if [ -z "$USPTO_API_KEY" ]; then
+            echo "Error: Could not fetch USPTO_API_KEY from Secret Manager."
+            exit 1
+        else
+            echo "[INFO] USPTO_API_KEY loaded from Secret Manager."
+        fi
+    else
+        echo "Error: gcloud not found and USPTO_API_KEY not set."
+        exit 1
+    fi
+else
+    echo "[INFO] USPTO_API_KEY found in environment."
+fi
+
+# ============================================================================
+# DIRECTORY AND STATE SETUP
+# ============================================================================
+
+DATA_DIR="/mnt/storage_pool/${JURISDICTION}"
+mkdir -p "$DATA_DIR"
+
+STATE_FILE="$DATA_DIR/.download_state_$YEAR.txt"
+LOG_FILE="$DATA_DIR/download_$YEAR.log"
+touch "$STATE_FILE"
+
+# ============================================================================
+# START DOWNLOAD PROCESS
+# ============================================================================
+
+log "======================================================"
+log "Starting ${JURISDICTION^^} data download for year: $YEAR"
+log "State file: $STATE_FILE"
+log "======================================================"
+
+if [ -s "$STATE_FILE" ]; then
+    COMPLETED_COUNT=$(wc -l < "$STATE_FILE")
+    log "Resuming from state file with $COMPLETED_COUNT completed downloads"
+fi
+
+# ============================================================================
+# MAIN DOWNLOAD LOOP
+# ============================================================================
+
+for MONTH in {1..12}; do
+    MONTH_FORMATTED=$(printf "%02d" $MONTH)
+    START_DATE="$YEAR-$MONTH_FORMATTED-01"
+    END_DATE=$(date -d "$START_DATE +1 month -1 day" +%Y-%m-%d 2>/dev/null || \
+               date -v +1m -v -1d -j -f "%Y-%m-%d" "$START_DATE" +%Y-%m-%d)
+
+    log "======================================================"
+    log "Fetching file list for: $YEAR-$MONTH_FORMATTED"
+    log "Date range: $START_DATE to $END_DATE"
+    log "======================================================"
+
+    # Fetch file list from USPTO API
+    API_RESPONSE=$(curl -s -X GET \
+        "https://api.uspto.gov/api/v1/datasets/products/appdt?fileDataFromDate=$START_DATE&fileDataToDate=$END_DATE&includeFiles=true" \
+        -H 'Accept: application/json' \
+        -H "x-api-key: $USPTO_API_KEY")
+    
+    if [ -z "$API_RESPONSE" ]; then
+        log "Error: Failed to fetch file list for $YEAR-$MONTH_FORMATTED"
+        continue
+    fi
+
+    # ========================================================================
+    # PROCESS FILES (keep only latest revision per week; keep SUPP)
+    # ========================================================================
+    
+    echo "$API_RESPONSE" \
+    | jq -r '.bulkDataProductBag[0].productFileBag.fileDataBag[]?
+             | select(.fileName | endswith(".tar"))
+             | "\(.fileName) \(.fileDownloadURI)"' \
+    | awk '
+        function print_best() {
+            for (k in best) print best[k];
+        }
+        
+        {
+            fn=$1; uri=$2;
+
+            # Pass SUPP archives through as-is (unique key per SUPP file)
+            if (fn ~ /^I[0-9]{8}-SUPP.*\.tar$/) {
+                key="SUPP:" fn;
+                best[key]=fn " " uri;
+                next;
+            }
+
+            # Track highest _rN for the base week
+            week=substr(fn,2,8);
+            rev=0;
+            
+            if (fn ~ /_r[0-9]+\.tar$/) {
+                if (match(fn, /_r([0-9]+)\.tar$/)) {
+                    rev=substr(fn, RSTART+2, RLENGTH-6)+0;
+                }
+            }
+            
+            key="WEEK:" week;
+            
+            if (!(key in best) || rev > bestrev[key]) {
+                best[key]=fn " " uri;
+                bestrev[key]=rev;
+            }
+        }
+        
+        END {
+            print_best();
+        }
+    ' \
+    | while read -r FILENAME API_URI; do
+        [ -z "$FILENAME" ] && continue
+
+        # Skip if already completed
+        if is_completed "$FILENAME"; then
+            log "Skip: $FILENAME (already completed)"
+            continue
+        fi
+
+        # Fast-skip if week folder already exists
+        WEEKSTAMP=${FILENAME:1:8}  # I20240125_r1.tar -> 20240125
+        
+        # Determine the target directory for this patent release
+        TARGET_DIR="$DATA_DIR/I$WEEKSTAMP"
+        if [[ "$FILENAME" == *"SUPP"* ]]; then
+            TARGET_DIR="$DATA_DIR/I${WEEKSTAMP}-SUPP"
+        fi
+
+        if [ -d "$TARGET_DIR" ] && find "$TARGET_DIR" -maxdepth 1 -name "*.xml" -print -quit | grep -q .; then
+            log "Skip: $FILENAME (week folder '$TARGET_DIR' already contains XML files)"
+            mark_completed "$FILENAME"
+            continue
+        fi
+
+        log "Processing: $FILENAME"
+        TEMP_TAR="$DATA_DIR/${FILENAME}.tmp"
+        FINAL_TAR="$DATA_DIR/$FILENAME"
+
+        # Rate limit
+        sleep 2
+
+        # Download file
+        if curl -L -f -o "$TEMP_TAR" -X GET "$API_URI" -H "x-api-key: $USPTO_API_KEY"; then
+            log "Download complete: $FILENAME"
+        else
+            ERR=$?
+            if [ $ERR -eq 22 ]; then
+                log "HTTP error (possibly 429) for $FILENAME. Will retry later."
+                sleep 10
+            else
+                log "Failed to download $FILENAME (curl error $ERR). Will retry later."
+            fi
+            rm -f "$TEMP_TAR"
+            continue
+        fi
+
+        # Validate tar file
+        log "Validating $FILENAME"
+        if validate_tar "$TEMP_TAR"; then
+            mv "$TEMP_TAR" "$FINAL_TAR"
+        else
+            log "Corrupt tar: $FILENAME. Will retry later."
+            rm -f "$TEMP_TAR"
+            continue
+        fi
+
+        # Create target directory for this specific release
+        mkdir -p "$TARGET_DIR"
+        log "Extracting $FILENAME to $TARGET_DIR (temporarily all files, then deleting non-XML)"
+        
+        # Extract all files into the specific target directory
+        if tar -xf "$FINAL_TAR" -C "$TARGET_DIR/"; then
+            log "Initial extraction successful: $FILENAME"
+
+            # Extract nested .ZIP files (extract all, then delete non-XML)
+            if command -v unzip >/dev/null 2>&1; then
+                log "Extracting nested .ZIP files (temporarily all files, then deleting non-XML)..."
+                # Find ZIP files within the just-extracted tar directory and unzip them in place
+                find "$TARGET_DIR" -type f -name "*.ZIP" -exec sh -c '
+                    DIRNAME=$(dirname "{}")
+                    unzip -o -d "$DIRNAME" "{}" # Unzip all contents
+                    rm "{}" # Remove the original ZIP file
+                ' \;
+                log "Finished nested .ZIP processing."
+            else
+                log "unzip not found; skipping nested .ZIP extraction."
+            fi
+
+            # --- CRITICAL NEW STEP: DELETE NON-XML FILES ---
+            log "Deleting all non-XML files from $TARGET_DIR and its subdirectories..."
+            # Find and delete files that do NOT end with .xml (case-insensitive)
+            # -depth ensures subdirectories are empty before trying to delete them
+            find "$TARGET_DIR" -type f ! -iname "*.xml" -delete
+            # Also remove any empty directories that might have been created or left after deleting files
+            find "$TARGET_DIR" -type d -empty -delete
+            log "Finished deleting non-XML files."
+
+        else
+            log "Extraction failed for $FILENAME. Cleaning up $TARGET_DIR and trying again later."
+            rm -rf "$TARGET_DIR" # Remove the potentially incomplete/corrupt directory
+            rm -f "$FINAL_TAR"
+            continue
+        fi
+
+        rm -f "$FINAL_TAR"
+        mark_completed "$FILENAME"
+        log "Completed: $FILENAME"
+    done
+
+    record_global_state "$YEAR" "$MONTH_FORMATTED"
+    log "Recorded global state for $YEAR-$MONTH_FORMATTED"
+done
+
+# ============================================================================
+# POST-PROCESSING
+# ============================================================================
+
+log "======================================================"
+log "Renaming .XML files to .xml..."
+
+RENAMED_COUNT=0
+
+# Iterate through all XML files across all extracted subdirectories
+find "$DATA_DIR" -type f -name "*.XML" | while read -r file; do
+    NEW_NAME="${file%.XML}.xml"
+    if [ ! -e "$NEW_NAME" ]; then
+        mv -- "$file" "$NEW_NAME"
+        ((RENAMED_COUNT++))
+    fi
+done
+
+log "Renamed $RENAMED_COUNT files"
+
+# ============================================================================
+# COMPLETION
+# ============================================================================
+
+log "======================================================"
+log "All data for $YEAR ($JURISDICTION) downloaded and prepared"
+log "Total completed: $(wc -l < "$STATE_FILE")"
+log "Data directory: $DATA_DIR"
+log "======================================================"
