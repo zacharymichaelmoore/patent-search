@@ -20,7 +20,7 @@
       }
 
       header {
-        padding: 1rem 1.5rem 0rem 1.5rem;
+        padding: 1rem 3rem 0rem 3rem;
       }
 
       .header-content {
@@ -40,7 +40,6 @@
       .subtitle {
         font-size: 1rem;
         color: #6b7280;
-        margin-top: 0.25rem;
       }
 
       main {
@@ -113,7 +112,8 @@
       }
 
       textarea {
-        min-height: 150px;
+        min-height: 128px;
+        max-height: 30ch;
         resize: vertical;
       }
 
@@ -514,7 +514,7 @@
       <div class="grid">
         <!-- Left: Description Editor -->
         <div class="card">
-          <h2 class="card-title">Patent Description</h2>
+          <h2 class="card-title">1. Patent Description</h2>
 
           <div id="promptSection">
             <label for="promptInput">Title</label>
@@ -550,7 +550,7 @@
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
-              <span>Search Query</span>
+              <span>2. Search Query</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
                 <span>Analyzing...</span>
