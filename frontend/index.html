@@ -144,7 +144,6 @@
 
       textarea {
         min-height: 128px;
-        max-height: 30ch;
         resize: vertical;
         background: white;
         border-radius: 0;
@@ -595,9 +594,6 @@
             <div id="queryBuilder">
               <div id="emptyState" class="empty-state">
                 <p style="cursor: default;">Terms will display here</p>
-                <p style="font-size: 0.75rem; cursor: default;">
-                  Terms will be automatically created
-                </p>
               </div>
 
               <div id="queryPreview" class="hidden" style="padding: 1.5rem; border: 1px solid gainsboro;">
@@ -670,7 +666,6 @@
         class="btn-secondary btn-large hidden"
         onclick="downloadCSV()"
         id="downloadButton"
-        style="margin: 0rem 1rem"
       >
         Download csv
       </button>
