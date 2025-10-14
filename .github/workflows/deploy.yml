@@ -37,11 +37,17 @@ jobs:
 
       - name: Deploy and Restart on VM
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           set -e # Exit immediately if any command fails
 
           echo "--- Navigating to project directory ---"
           cd ~/patent-search
+
+          # <<< FIX: Take ownership of all files in the directory >>>
+          # This command changes the owner of all files to the current user.
+          # We need sudo because some files are owned by root (from Docker).
+          echo "--- Fixing file permissions ---"
+          sudo chown -R $USER:$USER .
 
           echo "--- Pulling latest code from main branch ---"
           git fetch origin
@@ -51,8 +57,7 @@ jobs:
           if [ "${{ steps.check.outputs.rebuild }}" == "true" ]; then
             echo "--- Rebuilding Docker image (rebuild=true) ---"
             
-            # CRITICAL FIX: Build with verbose output streaming to the runner
-            # No redirection to a log file!
+            # Build with verbose output streaming to the runner
             docker build --progress=plain -t patent-app .
             
             echo "--- Build complete ---"
