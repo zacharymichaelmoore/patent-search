@@ -45,7 +45,9 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://172.17.0.1:11434/api/generate")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
 OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 50)
-QDRANT_FETCH_COUNT = 50
+QDRANT_FETCH_COUNT = _safe_int_env("QDRANT_FETCH_COUNT", 500)
+HIGH_SCORE_THRESHOLD = _safe_int_env("HIGH_SCORE_THRESHOLD", 90)
+MEDIUM_SCORE_THRESHOLD = _safe_int_env("MEDIUM_SCORE_THRESHOLD", 80)
 ANALYSIS_PROGRESS_INTERVAL = _safe_int_env("ANALYSIS_PROGRESS_INTERVAL", 1)
 OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
 
@@ -198,19 +200,11 @@ No extra text.
 
 
 async def event_stream(user_description, top_k):
-    """
-    Fixed version: 
-    1. Fetch top 50 from Qdrant
-    2. Analyze ALL 50 with LLama
-    3. Sort by score
-    4. Return top 15 (or whatever top_k is)
-    """
     try:
         yield format_sse("log", {"message": "[SEARCH] Starting embedding..."})
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
 
         yield format_sse("log", {"message": "[SEARCH] Finding candidate patents..."})
-        # Always fetch exactly 50 candidates from Qdrant
         patents = await asyncio.to_thread(qdrant_search, qvec, QDRANT_FETCH_COUNT)
 
         if not patents:
@@ -233,7 +227,6 @@ async def event_stream(user_description, top_k):
                 analyzed = await analyze_patent_with_ollama_async(client, user_description, patent)
                 return idx, analyzed
 
-        # Create tasks for ALL 50 patents
         tasks = [asyncio.create_task(analyze_with_limit(idx, patent))
                  for idx, patent in enumerate(patents)]
 
@@ -256,8 +249,16 @@ async def event_stream(user_description, top_k):
             reverse=True
         )
 
-        # Take top N results (default 15)
-        top_results = analyzed_patents[:top_k]
+        scored_patents = [p for p in analyzed_patents if p.get("score") is not None]
+        high_confidence_total = [
+            p for p in scored_patents if p["score"] >= HIGH_SCORE_THRESHOLD
+        ]
+        medium_confidence_total = [
+            p for p in scored_patents if p["score"] >= MEDIUM_SCORE_THRESHOLD
+        ]
+
+        # Take top results above the high threshold
+        top_results = high_confidence_total[:top_k]
 
         # Stream the top results to frontend
         for idx, result in enumerate(top_results):
@@ -267,22 +268,16 @@ async def event_stream(user_description, top_k):
                 "original_index": idx
             })
 
-        # Count how many of ALL analyzed patents had score >= 80
-        high_relevance_count = sum(1 for p in analyzed_patents if p.get(
-            "score") is not None and p["score"] >= 80)
-
-        # Count how many in our top_k results have score >= 80
-        top_results_high_count = sum(1 for p in top_results if p.get(
-            "score") is not None and p["score"] >= 80)
-
         yield format_sse("log", {
             "message": f"[SEARCH] Finished analysis. Showing top {len(top_results)} results."
         })
         yield format_sse("complete", {
             "message": "Search complete",
-            "results": top_results_high_count,
+            "results": len(top_results),
             "analyzed": processed,
-            "high_relevance": high_relevance_count,
+            "high_confidence": len(high_confidence_total),
+            "medium_confidence": len(medium_confidence_total),
+            "score_threshold": HIGH_SCORE_THRESHOLD,
             "total_candidates": total_candidates
         })
 

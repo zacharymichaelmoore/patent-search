@@ -779,6 +779,7 @@
       let popoverTimeout = null;
       let lastSearchQuery = "";
       let lastTopK = 100;
+      let scoreThreshold = 90;
       let popoverContext = {
         mode: null, // 'hover' or 'add'
         category: null, // 'device' or 'subject'
@@ -1462,7 +1463,7 @@
               !resultPayload ||
               resultPayload.score === null ||
               resultPayload.score === undefined ||
-              resultPayload.score < 80
+              resultPayload.score < scoreThreshold
             ) {
               return;
             }
@@ -1497,21 +1498,24 @@
           restoreSearchButton(searchButton);
 
           if (resultCount > 0) {
-            const highRelevanceCount =
-              data && typeof data.high_relevance === "number"
-                ? data.high_relevance
+            if (data && typeof data.score_threshold === "number") {
+              scoreThreshold = data.score_threshold;
+            }
+            const highConfidenceCount =
+              data && typeof data.high_confidence === "number"
+                ? data.high_confidence
                 : resultCount;
             const totalCandidates =
               data && typeof data.total_candidates === "number"
                 ? data.total_candidates
-                : highRelevanceCount;
-            searchStatusMessage.textContent = `Showing ${resultCount} with a score of 80+ (analyzed) out of ${highRelevanceCount} high-confidence matches from ${totalCandidates} initial candidates.`;
+                : highConfidenceCount;
+            searchStatusMessage.textContent = `Showing ${resultCount} with a score of ${scoreThreshold}+ (analyzed) out of ${highConfidenceCount} high-confidence matches from ${totalCandidates} initial candidates.`;
             downloadButton.classList.remove("hidden");
           } else {
             searchStatusMessage.textContent =
-              "No results found with a score of 80 or above.";
+              `No results found with a score of ${scoreThreshold} or above.`;
             resultsContainer.innerHTML =
-              '<div class="empty-state">No results found with a score of 80 or above.</div>';
+              `<div class="empty-state">No results found with a score of ${scoreThreshold} or above.</div>`;
           }
           searchStatusMessage.classList.remove("hidden");
 
@@ -1538,7 +1542,7 @@
       }
 
       function addResult(result) {
-        // Only add the result if the score is 80 or higher
+        // Only add the result if it meets the active score threshold
         const numericScore =
           typeof result.score === "number"
             ? result.score
@@ -1548,7 +1552,7 @@
           Number.isNaN(numericScore) ||
           numericScore === null ||
           numericScore === undefined ||
-          numericScore < 80
+          numericScore < scoreThreshold
         ) {
           return false; // Indicate that the result was not added
         }
@@ -1563,9 +1567,9 @@
         }
 
         let scoreClass = "score-low";
-        if (numericScore >= 90) {
+        if (numericScore >= 95) {
           scoreClass = "score-high";
-        } else if (numericScore >= 80) {
+        } else if (numericScore >= scoreThreshold) {
           scoreClass = "score-medium";
         }
 
