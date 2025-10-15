@@ -52,6 +52,11 @@ jobs:
           git fetch origin
           git reset --hard origin/main
 
+          echo "--- Tearing down old application stack ---"
+          # This command stops and removes the containers from the previous deployment,
+          # ensuring a clean slate.
+          docker compose down
+          
           echo "--- Starting application stack with Docker Compose ---"
           # Always run 'up --build'. Docker's layer caching is very fast,
           # so it will only rebuild layers that have changed. This is simpler
