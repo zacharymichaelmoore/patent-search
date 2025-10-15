@@ -1590,11 +1590,6 @@
       <div class="result-abstract" style="margin-bottom: 0.75rem;">
         ${result.preview || result.abstract || "No abstract available"}
       </div>
-      ${
-        result.reason && result.reason !== "Pending"
-          ? `<div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.75rem; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem;"><strong>Analysis:</strong> ${result.reason}</div>`
-          : ""
-      }
       <div class="result-meta" style="margin-bottom: 0.5rem;">
         <span>${result.patentNumber} • ${result.filingDate}</span>
       </div>
