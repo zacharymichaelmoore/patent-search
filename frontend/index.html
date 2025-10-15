@@ -35,20 +35,19 @@
         align-items: center;
         padding: 0.375rem 0.75rem;
         background: transparent;
-        color: #6b7280;
-        border: 1px dashed #d1d5db;
-        border-radius: 9999px;
+        color: black;
+        border: 1px dashed gainsboro;
+        border-radius: 0.5rem;
         font-size: 1rem;
         cursor: pointer;
         transition: all 0.1s;
-        margin-top: 0.5rem;
+        font-family: serif;
       }
 
       .btn-add-term:hover {
-        background: #f9fafb;
-        color: #3b82f6;
-        border-color: #3b82f6;
-        border-style: solid;
+        color: black;
+        background-color: gainsboro;
+        border: 1px solid gainsboro;
       }
 
       h1 {
@@ -178,12 +177,14 @@
 
       .btn-primary {
         color: black;
+        background-color: none;
         border-radius: 0.5rem;
         border: 1px dashed gainsboro;
+        font-family: serif;
       }
 
       .btn-primary:hover:not(:disabled) {
-        background: #dcdcdc;
+        background: gainsboro !important;
         transition: all 0.1s;
         border: 1px dashed gainsboro;
       }
@@ -222,10 +223,11 @@
       }
 
       .btn-large:hover:not(:disabled) {
-        background: aliceblue;
-        color: darkblue;
-        border: 1px dashed darkblue;
-        transition: all 0.1s;
+        background: coral !important;
+        color: white;
+        border: 1px solid white;
+        transition: all 0.2s;
+        font-family: serif;
       }
 
       .query-section {
@@ -445,7 +447,6 @@
       .result-title {
         font-weight: 600;
         color: #111827;
-        margin-bottom: 0.5rem;
       }
 
       .result-abstract {
@@ -512,7 +513,6 @@
         border-radius: 0.25rem;
         font-size: 0.75rem;
         font-weight: 600;
-        margin-left: 0.5rem;
       }
 
       .score-low {
@@ -668,7 +668,7 @@
             <div class="input-section">
               <label for="topK"> Number of Results </label>
               <input
-                type="number"
+                type="text"
                 id="topK"
                 value="10"
                 readonly
@@ -738,7 +738,7 @@
         onclick="downloadCSV()"
         id="downloadButton"
       >
-        Download csv
+        Download .csv
       </button>
       <div id="resultsContainer" class="results-container hidden"></div>
     </main>
@@ -1497,7 +1497,11 @@
           restoreSearchButton(searchButton);
 
           if (resultCount > 0) {
-            searchStatusMessage.textContent = `Found ${resultCount} results with a score of 80+.`;
+            const highRelevanceCount =
+              typeof data?.high_relevance === "number"
+                ? data.high_relevance
+                : resultCount;
+            searchStatusMessage.textContent = `Showing ${resultCount} with a score of 80+ out of ${highRelevanceCount}.`;
             downloadButton.classList.remove("hidden");
           } else {
             searchStatusMessage.textContent =
@@ -1578,8 +1582,7 @@
           : ""
       }
       <div class="result-meta" style="margin-bottom: 0.5rem;">
-        <span>📄 ${result.patentNumber || "N/A"}</span>
-        <span>📅 Filed: ${result.filingDate || "N/A"}</span>
+        <span>${result.patentNumber} • ${result.filingDate}</span>
       </div>
       ${
         result.googlePatentUrl

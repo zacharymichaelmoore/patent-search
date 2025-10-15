@@ -223,6 +223,7 @@ async def event_stream(user_description, top_k):
         client = await get_httpx_client()
         high_relevance_patents = []
         processed = 0
+        high_relevance_count = 0
         semaphore = asyncio.Semaphore(OLLAMA_CONCURRENCY)
 
         async def analyze_with_limit(idx, patent):
@@ -248,6 +249,7 @@ async def event_stream(user_description, top_k):
                     })
 
                 if analyzed_patent.get("score") is not None and analyzed_patent["score"] >= 80:
+                    high_relevance_count += 1
                     high_relevance_patents.append(analyzed_patent)
                     yield format_sse("result", {
                         "index": len(high_relevance_patents) - 1,
@@ -273,7 +275,9 @@ async def event_stream(user_description, top_k):
         yield format_sse("complete", {
             "message": "Search complete",
             "results": len(high_relevance_patents),
-            "analyzed": processed
+            "analyzed": processed,
+            "high_relevance": high_relevance_count,
+            "trimmed": max(high_relevance_count - len(high_relevance_patents), 0)
         })
 
     except Exception as e:
