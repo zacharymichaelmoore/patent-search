@@ -144,9 +144,11 @@
 
       textarea {
         min-height: 128px;
-        resize: vertical;
+        height: auto;
+        resize: none;
         background: white;
         border-radius: 0;
+        overflow: hidden;
       }
 
       input:focus,
@@ -800,6 +802,14 @@
         );
       });
 
+      function autoResizeDescription(element) {
+        if (!element) return;
+        element.style.height = "auto";
+        element.style.height = `${element.scrollHeight}px`;
+      }
+
+      autoResizeDescription(document.getElementById("userDescription"));
+
       // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
 
@@ -820,6 +830,7 @@
         btn.disabled = true;
         btn.textContent = "Generating...";
         textarea.value = "";
+        autoResizeDescription(textarea);
 
         try {
           const response = await fetch("/api/generate-description", {
@@ -835,6 +846,7 @@
             const { done, value } = await reader.read();
             if (done) break;
             textarea.value += decoder.decode(value);
+            autoResizeDescription(textarea);
             textarea.scrollTop = textarea.scrollHeight;
           }
 
@@ -851,6 +863,7 @@
       document
         .getElementById("userDescription")
         .addEventListener("input", (e) => {
+          autoResizeDescription(e.target);
           clearTimeout(extractTimeout);
           extractTimeout = setTimeout(() => {
             extractTerms(e.target.value);

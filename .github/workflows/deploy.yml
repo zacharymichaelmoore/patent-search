@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Inspect code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetches all history for git diff
@@ -19,7 +19,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Determine if Docker rebuild is needed
+      - name: Determine if rebuild is needed
         id: check
         run: |
           echo "Checking if Dockerfile or requirements changed..."
@@ -35,7 +35,7 @@ jobs:
             echo "Rebuild is not required."
           fi
 
-      - name: Deploy and Restart on VM
+      - name: Deploy on VM
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           set -e # Exit immediately if any command fails
