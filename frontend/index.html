@@ -1043,10 +1043,10 @@
             container.appendChild(badge);
 
             if (index < terms.length - 1) {
-              const operator = document.createElement("span");
-              operator.className = "operator";
-              operator.textContent = "OR";
-              container.appendChild(operator);
+              const comma = document.createElement("span");
+              // operator.className = "operator";
+              comma.textContent = ",";
+              container.appendChild(comma);
             }
           });
         } else {
