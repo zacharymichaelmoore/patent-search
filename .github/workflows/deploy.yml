@@ -26,7 +26,7 @@ jobs:
           # Correctly diff against the previous commit on the main branch
           CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           echo "Files changed in this push: $CHANGED_FILES"
-          
+
           if echo "$CHANGED_FILES" | grep -qE '(^Dockerfile$|^requirements\.txt$)'; then
             echo "rebuild=true" >> $GITHUB_OUTPUT
             echo "Rebuild is required."
@@ -43,6 +43,7 @@ jobs:
           sudo chown -R $USER:$USER .
           git fetch origin
           git reset --hard origin/main
+          sudo docker builder prune -f
           sudo docker compose down
           sudo docker compose up --build -d
           sudo docker image prune -f
