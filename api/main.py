@@ -44,7 +44,7 @@ EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://172.17.0.1:11434/api/generate")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
-OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 50)
+OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 250)
 QDRANT_FETCH_COUNT = _safe_int_env("QDRANT_FETCH_COUNT", 500)
 HIGH_SCORE_THRESHOLD = _safe_int_env("HIGH_SCORE_THRESHOLD", 90)
 MEDIUM_SCORE_THRESHOLD = _safe_int_env("MEDIUM_SCORE_THRESHOLD", 80)
@@ -54,7 +54,7 @@ OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
 _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
 HTTPX_LIMITS = httpx.Limits(
-    max_connections=max(OLLAMA_CONCURRENCY * 4, 1),
+    max_connections=max(OLLAMA_CONCURRENCY * 8, 1),
     max_keepalive_connections=max(OLLAMA_CONCURRENCY, 1),
 )
 _httpx_client: Optional[httpx.AsyncClient] = None
