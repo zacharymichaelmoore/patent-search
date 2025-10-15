@@ -1,7 +1,8 @@
 services:
   app:
     build: .
-    container_name: patent-search-server
+    image: patent-app
+    container_name: patent-app
     ports:
       - "8091:8090"
     environment:
