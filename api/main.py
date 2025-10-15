@@ -13,7 +13,6 @@ import os
 import re
 import httpx
 
-
 def _safe_int_env(var_name: str, default: int, minimum: int = 1) -> int:
     raw_value = os.getenv(var_name, str(default))
     try:
