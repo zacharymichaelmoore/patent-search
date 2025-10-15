@@ -14,6 +14,7 @@ import re
 import httpx
 from typing import Optional, Dict, Any
 
+
 def _safe_int_env(var_name: str, default: int, minimum: int = 1) -> int:
     raw_value = os.getenv(var_name, str(default))
     try:
@@ -31,6 +32,7 @@ def _safe_float_env(var_name: str, default: float) -> float:
         return float(raw_value)
     except (TypeError, ValueError):
         return default
+
 
 # ---- GLOBAL CONFIG ----
 app = FastAPI(title="Patent Search App")
@@ -77,6 +79,7 @@ def format_sse(event: str, data: Dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 # ---- HELPERS ----
+
 
 def embed_text_sync(text: str):
     return _model.encode(text).tolist()
@@ -141,6 +144,8 @@ Respond only in JSON, following this schema:
 }}
 No extra text.
 """
+    print(f"--- USING MODEL: llama3.1-8gpu (Version 2) ---")
+
     try:
         response = await client.post(
             OLLAMA_URL,
@@ -250,7 +255,8 @@ async def event_stream(user_description, top_k):
             reverse=True
         )
 
-        scored_patents = [p for p in analyzed_patents if p.get("score") is not None]
+        scored_patents = [
+            p for p in analyzed_patents if p.get("score") is not None]
         high_confidence_total = [
             p for p in scored_patents if p["score"] >= HIGH_SCORE_THRESHOLD
         ]
