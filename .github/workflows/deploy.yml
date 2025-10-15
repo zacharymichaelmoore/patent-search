@@ -39,33 +39,11 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           set -e # Exit immediately if any command fails
-
-          echo "--- Navigating to project directory ---"
           cd ~/patent-search
-
-          # This command changes the owner of all files to the current user.
-          # We need sudo because some files are owned by root (from Docker).
-          echo "--- Fixing file permissions ---"
           sudo chown -R $USER:$USER .
-
-          echo "--- Pulling latest code from main branch ---"
           git fetch origin
           git reset --hard origin/main
-
-          echo "--- Tearing down old application stack ---"
-          # This command stops and removes the containers from the previous deployment,
-          # ensuring a clean slate.
           docker compose down
-          
-          echo "--- Starting application stack with Docker Compose ---"
-          # Always run 'up --build'. Docker's layer caching is very fast,
-          # so it will only rebuild layers that have changed. This is simpler
-          # and more reliable than our shell script logic.
           docker compose up --build -d
-          
-          echo "--- Deployment successfully completed ---"
-          
-          echo "--- Pruning old docker images to save space ---"
           docker image prune -f
-          
           EOF
