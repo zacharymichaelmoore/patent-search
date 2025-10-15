@@ -1485,25 +1485,23 @@
           if (hasCompleted) return;
           hasCompleted = true;
 
-          let data;
           try {
-            data = JSON.parse(event.data || "{}");
+            const data = JSON.parse(event.data || "{}");
             handleSearchComplete(data);
           } catch (err) {
             console.warn("Failed to parse complete event", err);
             hideSearchProgress();
-            data = null;
           }
 
           restoreSearchButton(searchButton);
 
           if (resultCount > 0) {
             const highRelevanceCount =
-              data && typeof data.high_relevance === "number"
+              typeof data?.high_relevance === "number"
                 ? data.high_relevance
                 : resultCount;
             const totalCandidates =
-              data && typeof data.total_candidates === "number"
+              typeof data?.total_candidates === "number"
                 ? data.total_candidates
                 : highRelevanceCount;
             searchStatusMessage.textContent = `Showing ${resultCount} with a score of 80+ (analyzed) out of ${highRelevanceCount} high-confidence matches from ${totalCandidates} initial candidates.`;
