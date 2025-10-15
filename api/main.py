@@ -216,6 +216,7 @@ async def event_stream(user_description, top_k):
             return
 
         total_candidates = len(patents)
+        max_analyzed = min(len(patents), max(top_k * QDRANT_FETCH_MULTIPLIER, top_k))
         yield format_sse("log", {
             "message": f"[SEARCH] Found {total_candidates} candidates, analyzing with concurrency={OLLAMA_CONCURRENCY}..."
         })
@@ -231,10 +232,11 @@ async def event_stream(user_description, top_k):
                 analyzed = await analyze_patent_with_ollama_async(client, user_description, patent)
                 return idx, analyzed
 
-        tasks = [
-            asyncio.create_task(analyze_with_limit(idx, patent))
-            for idx, patent in enumerate(patents)
-        ]
+        tasks = []
+        for idx, patent in enumerate(patents):
+            if idx >= max_analyzed:
+                break
+            tasks.append(asyncio.create_task(analyze_with_limit(idx, patent)))
 
         cancel_remaining = False
 
