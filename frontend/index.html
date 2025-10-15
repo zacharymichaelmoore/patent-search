@@ -1528,26 +1528,36 @@
 
       function addResult(result) {
         // Only add the result if the score is 80 or higher
+        const numericScore =
+          typeof result.score === "number"
+            ? result.score
+            : Number.parseFloat(result.score);
+
         if (
-          result.score === null ||
-          result.score === undefined ||
-          result.score < 80
+          Number.isNaN(numericScore) ||
+          numericScore === null ||
+          numericScore === undefined ||
+          numericScore < 80
         ) {
           return false; // Indicate that the result was not added
         }
 
         const resultsContainer = document.getElementById("resultsContainer");
 
-        const scoreClass =
-          result.level === "High"
-            ? "score-high"
-            : result.level === "Medium"
-            ? "score-medium"
-            : "score-low";
+        let scoreClass = "score-low";
+        if (numericScore >= 90) {
+          scoreClass = "score-high";
+        } else if (numericScore >= 80) {
+          scoreClass = "score-medium";
+        }
+
+        const displayScore = Number.isInteger(numericScore)
+          ? numericScore
+          : numericScore.toFixed(2);
 
         const scoreDisplay =
-          result.score !== null && result.score !== undefined
-            ? `<span class="score-badge ${scoreClass}">${result.level} - ${result.score}/100</span>`
+          numericScore !== null && numericScore !== undefined
+            ? `<span class="score-badge ${scoreClass}">${displayScore}</span>`
             : "";
 
         const resultHTML = `

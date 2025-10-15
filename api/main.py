@@ -100,7 +100,6 @@ def qdrant_search(query_vector, top_k=10):
             "preview": (payload.get("abstract") or "")[:400],
             "file_path": payload.get("file_path"),
             "score": None,
-            "level": "Unknown",
             "reason": "Pending"
         })
     return results
@@ -137,7 +136,6 @@ ABSTRACT:
 Respond only in JSON, following this schema:
 {{
   "score": <integer from 0 to 100>,
-  "level": "<Low|Medium|High>",
   "reason": "<short explanation>"
 }}
 No extra text.
@@ -157,11 +155,28 @@ No extra text.
         full_response_text = response.json().get("response", "")
         analysis_json = extract_json_from_text(full_response_text)
 
-        if analysis_json and all(k in analysis_json for k in ("score", "level", "reason")):
-            patent.update(analysis_json)
+        if analysis_json and "score" in analysis_json:
+            raw_score = analysis_json.get("score")
+            try:
+                score_value = float(raw_score)
+            except (TypeError, ValueError):
+                score_value = None
+
+            if score_value is not None:
+                patent["score"] = round(score_value, 2)
+                if "reason" in analysis_json and analysis_json.get("reason"):
+                    patent["reason"] = analysis_json.get("reason")
+            else:
+                patent.update({
+                    "score": None,
+                    "reason": "Failed to parse analysis."
+                })
+                return patent
         else:
-            patent.update({"score": None, "level": "Unknown",
-                          "reason": "Failed to parse analysis."})
+            patent.update({
+                "score": None,
+                "reason": "Failed to parse analysis."
+            })
 
         return patent
 
@@ -169,14 +184,18 @@ No extra text.
         raise
     except httpx.RequestError as e:
         print(f"Error analyzing patent {patent.get('patentNumber')}: {e}")
-        patent.update({"score": None, "level": "Unknown",
-                      "reason": f"Analysis timed out or failed: {e}"})
+        patent.update({
+            "score": None,
+            "reason": f"Analysis timed out or failed: {e}"
+        })
         return patent
     except Exception as e:
         print(
             f"General error analyzing patent {patent.get('patentNumber')}: {e}")
-        patent.update({"score": None, "level": "Unknown",
-                      "reason": f"An unexpected error occurred: {e}"})
+        patent.update({
+            "score": None,
+            "reason": f"An unexpected error occurred: {e}"
+        })
         return patent
 
 
