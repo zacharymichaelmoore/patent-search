@@ -42,7 +42,7 @@ templates = Jinja2Templates(directory="frontend")
 
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
 OLLAMA_URL = os.getenv(
-    "OLLAMA_URL", "http://host.docker.internal:11434/api/generate")
+    "OLLAMA_URL", "http://host.docker.internal:11434")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
 OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 16)
@@ -145,7 +145,7 @@ No extra text.
         response = await client.post(
             OLLAMA_URL,
             json={
-                "model": "llama3.1:8bgpu",
+                "model": "llama3.1:8bgpu:latest",
                 "prompt": prompt,
                 "stream": False
             },
