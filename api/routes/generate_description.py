@@ -1,6 +1,6 @@
 import os
 import json
-import requests
+import httpx
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -11,6 +11,9 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://172.17.0.1:11434/api/generate")
 
 class GenerateRequest(BaseModel):
     prompt: str
+
+ASYNC_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+
 
 async def generate_stream(prompt: str):
     full_prompt = f"""You are a patent attorney helping draft a provisional patent application.
@@ -28,21 +31,28 @@ Write a professional provisional patent description:
 """.strip()
 
     try:
-        with requests.post(
-            OLLAMA_URL,
-            json={"model": "llama3.1:8b", "prompt": full_prompt, "stream": True},
-            stream=True,
-            timeout=120
-        ) as response:
-            for line in response.iter_lines(decode_unicode=True):
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                    if "response" in obj:
-                        yield obj["response"]
-                except json.JSONDecodeError:
-                    continue
+        async with httpx.AsyncClient(timeout=ASYNC_TIMEOUT) as client:
+            async with client.stream(
+                "POST",
+                OLLAMA_URL,
+                json={
+                    "model": "llama3.1:8b",
+                    "prompt": full_prompt,
+                    "stream": True,
+                },
+            ) as response:
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if obj.get("done"):
+                        break
+                    chunk = obj.get("response")
+                    if chunk:
+                        yield chunk
     except Exception as e:
         yield f"\n\n[Error: {e}]"
 
