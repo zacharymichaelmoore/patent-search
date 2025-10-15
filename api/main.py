@@ -145,7 +145,7 @@ No extra text.
         response = await client.post(
             OLLAMA_URL,
             json={
-                "model": "llama3.1:8bgpu:latest",
+                "model": "llama3.1-8gpu:latest",
                 "prompt": prompt,
                 "stream": False
             },

@@ -12,7 +12,7 @@ jobs:
       - name: Inspect code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history for git diff
+          fetch-depth: 0
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -52,27 +52,11 @@ jobs:
           git fetch origin
           git reset --hard origin/main
 
-          # Use the output from the previous step to decide whether to build
-          if [ "${{ steps.check.outputs.rebuild }}" == "true" ]; then
-            echo "--- Rebuilding Docker image (rebuild=true) ---"
-            
-            # Build with verbose output streaming to the runner
-            docker build --progress=plain -t patent-app .
-            
-            echo "--- Build complete ---"
-          else
-            echo "--- Skipping image rebuild (rebuild=false) ---"
-          fi
-
           echo "--- Starting application stack with Docker Compose ---"
-          # Use Docker Compose to bring the entire stack up.
-          # The '--build' flag is used only if the image needs to be rebuilt.
-          # The '-d' flag runs it in detached mode.
-          if [ "${{ steps.check.outputs.rebuild }}" == "true" ]; then
-            docker compose up --build -d
-          else
-            docker compose up -d
-          fi
+          # Always run 'up --build'. Docker's layer caching is very fast,
+          # so it will only rebuild layers that have changed. This is simpler
+          # and more reliable than our shell script logic.
+          docker compose up --build -d
           
           echo "--- Deployment successfully completed ---"
           
