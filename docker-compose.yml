@@ -6,7 +6,9 @@ services:
       - "8090:8090"
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - OLLAMA_URL=http://172.17.0.1:11434/api/generate
+      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./frontend:/app/frontend
       - ./api:/app/api
