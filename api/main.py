@@ -46,7 +46,8 @@ QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
 OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 4)
 QDRANT_FETCH_MULTIPLIER = _safe_int_env("QDRANT_FETCH_MULTIPLIER", 3)
-QDRANT_FETCH_LIMIT = _safe_int_env("QDRANT_FETCH_LIMIT", 300)
+QDRANT_FETCH_LIMIT = _safe_int_env("QDRANT_FETCH_LIMIT", 10000)
+QDRANT_FETCH_MINIMUM = _safe_int_env("QDRANT_FETCH_MINIMUM", 10000)
 ANALYSIS_PROGRESS_INTERVAL = _safe_int_env("ANALYSIS_PROGRESS_INTERVAL", 5)
 OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
 
@@ -185,7 +186,7 @@ async def event_stream(user_description, top_k):
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
 
         yield format_sse("log", {"message": "[SEARCH] Finding candidate patents..."})
-        fetch_count = max(top_k * QDRANT_FETCH_MULTIPLIER, top_k, 50)
+        fetch_count = max(top_k * QDRANT_FETCH_MULTIPLIER, top_k, QDRANT_FETCH_MINIMUM)
         if QDRANT_FETCH_LIMIT:
             fetch_count = min(fetch_count, QDRANT_FETCH_LIMIT)
         patents = await asyncio.to_thread(qdrant_search, qvec, fetch_count)
