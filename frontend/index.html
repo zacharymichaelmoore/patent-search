@@ -376,6 +376,32 @@
         font-size: 0.75rem;
         color: #6b7280;
       }
+      .progress-container {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+      }
+      .progress-track {
+        position: relative;
+        height: 0.5rem;
+        border-radius: 9999px;
+        background: #e5e7eb;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #3b82f6, #2563eb);
+        border-radius: inherit;
+        transition: width 0.2s ease-out;
+      }
+      .progress-message {
+        font-size: 0.75rem;
+        color: #4b5563;
+        text-align: center;
+      }
 
       .spinner-small {
         width: 1rem;
@@ -630,6 +656,15 @@
             >
               Search
             </button>
+            <div id="searchProgress" class="progress-container hidden">
+              <div class="progress-track">
+                <div id="searchProgressBar" class="progress-bar"></div>
+              </div>
+              <div
+                id="searchProgressMessage"
+                class="progress-message"
+              ></div>
+            </div>
             <p
               id="searchStatusMessage"
               class="hidden"
@@ -726,6 +761,11 @@
         category: null, // 'device' or 'subject'
       };
       let addTermDebounceTimeout = null;
+      let progressTotalCandidates = null;
+      let progressAnalyzedCount = 0;
+      let currentProgressPercent = 0;
+      let latestProgressMessage = "";
+      let progressHideTimeout = null;
 
       // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
@@ -844,6 +884,119 @@
         } catch (err) {
           console.warn("Failed to fetch related terms:", err);
         }
+      }
+
+      function formatProgressMessage(message) {
+        if (!message) return "";
+        return message.replace(/^\[[^\]]+\]\s*/, "").trim();
+      }
+
+      function setSearchProgress(percent, message) {
+        const container = document.getElementById("searchProgress");
+        const bar = document.getElementById("searchProgressBar");
+        const text = document.getElementById("searchProgressMessage");
+        if (!container || !bar || !text) return;
+
+        if (Number.isFinite(percent)) {
+          currentProgressPercent = Math.max(
+            0,
+            Math.min(100, Math.round(percent))
+          );
+        }
+
+        if (message) {
+          latestProgressMessage = formatProgressMessage(message);
+        }
+
+        bar.style.width = `${currentProgressPercent}%`;
+        text.textContent = latestProgressMessage;
+        container.classList.remove("hidden");
+      }
+
+      function resetSearchProgress() {
+        if (progressHideTimeout) {
+          clearTimeout(progressHideTimeout);
+          progressHideTimeout = null;
+        }
+        progressTotalCandidates = null;
+        progressAnalyzedCount = 0;
+        currentProgressPercent = 0;
+        latestProgressMessage = "Starting search...";
+        setSearchProgress(5, latestProgressMessage);
+      }
+
+      function hideSearchProgress() {
+        if (progressHideTimeout) {
+          clearTimeout(progressHideTimeout);
+          progressHideTimeout = null;
+        }
+        const container = document.getElementById("searchProgress");
+        const bar = document.getElementById("searchProgressBar");
+        const text = document.getElementById("searchProgressMessage");
+        if (!container || !bar || !text) return;
+        currentProgressPercent = 0;
+        latestProgressMessage = "";
+        bar.style.width = "0%";
+        text.textContent = "";
+        container.classList.add("hidden");
+      }
+
+      function updateSearchProgressFromLog(message) {
+        if (!message) return;
+        const cleanMessage = formatProgressMessage(message);
+        let percent = null;
+
+        if (/starting embedding/i.test(cleanMessage)) {
+          percent = Math.max(currentProgressPercent, 5);
+        } else if (/finding candidate/i.test(cleanMessage)) {
+          percent = Math.max(currentProgressPercent, 12);
+        } else if (/found\s+(\d+)\s+candidates?/i.test(cleanMessage)) {
+          const match = cleanMessage.match(/found\s+(\d+)\s+candidates?/i);
+          if (match) {
+            progressTotalCandidates = parseInt(match[1], 10) || null;
+            progressAnalyzedCount = 0;
+          }
+          percent = Math.max(currentProgressPercent, 20);
+        } else if (/processed\s+(\d+)\s*\/\s*(\d+)/i.test(cleanMessage)) {
+          const match = cleanMessage.match(/processed\s+(\d+)\s*\/\s*(\d+)/i);
+          if (match) {
+            progressAnalyzedCount = parseInt(match[1], 10) || 0;
+            const total = parseInt(match[2], 10) || progressTotalCandidates;
+            if (total) {
+              progressTotalCandidates = total;
+              const ratio = Math.max(0, Math.min(1, progressAnalyzedCount / total));
+              percent = Math.max(currentProgressPercent, 20 + ratio * 75);
+            }
+          }
+        } else if (/finished analysis/i.test(cleanMessage)) {
+          percent = Math.max(currentProgressPercent, 95);
+        }
+
+        setSearchProgress(percent, cleanMessage);
+      }
+
+      function handleSearchComplete(data) {
+        let message = "Search complete";
+        if (data && typeof data.analyzed === "number") {
+          progressAnalyzedCount = data.analyzed;
+        }
+        if (data && typeof data.results === "number") {
+          message = `${message} - ${data.results} result${
+            data.results === 1 ? "" : "s"
+          }`;
+        }
+        if (progressTotalCandidates && progressAnalyzedCount) {
+          message = `${message} (${progressAnalyzedCount} analyzed)`;
+        }
+
+        setSearchProgress(100, message);
+        if (progressHideTimeout) {
+          clearTimeout(progressHideTimeout);
+        }
+        progressHideTimeout = setTimeout(() => {
+          hideSearchProgress();
+          progressHideTimeout = null;
+        }, 1200);
       }
 
       function updateQueryPreview() {
@@ -1226,14 +1379,13 @@
         resultsContainer.classList.remove("hidden");
         resultsContainer.innerHTML =
           '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
-
-        // <<< FIX 2: This line was removed. It was overwriting the spinner.
-        // searchButton.textContent = "Searching...";
+        resetSearchProgress();
 
         let resultCount = 0;
         let buffer = "";
         let hasReceivedData = false;
-        let error = null; // Variable to track if an error occurred
+        let error = null;
+        let didReceiveCompleteEvent = false;
 
         try {
           const response = await fetch("/api/search", {
@@ -1262,6 +1414,22 @@
 
               try {
                 const data = JSON.parse(line);
+                if (data.event === "log") {
+                  updateSearchProgressFromLog(data.message || "");
+                  continue;
+                }
+                if (data.event === "error") {
+                  setSearchProgress(
+                    currentProgressPercent,
+                    data.message || "Search error"
+                  );
+                  throw new Error(data.message || "Search error");
+                }
+                if (data.event === "complete") {
+                  didReceiveCompleteEvent = true;
+                  handleSearchComplete(data);
+                  continue;
+                }
                 if (!hasReceivedData) {
                   resultsContainer.innerHTML = "";
                   hasReceivedData = true;
@@ -1284,6 +1452,7 @@
             '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
           searchStatusMessage.textContent = "Search failed. Please try again.";
           searchStatusMessage.classList.remove("hidden");
+          hideSearchProgress();
         } finally {
           // <<< FIX 3: The entire 'finally' block was updated to restore the button
           // and show the final status message. This logic was missing.
@@ -1312,6 +1481,9 @@
           } else if (!error) {
             resultsContainer.innerHTML =
               '<div class="empty-state">No results were returned.</div>';
+          }
+          if (!didReceiveCompleteEvent) {
+            hideSearchProgress();
           }
         }
       }
