@@ -1074,13 +1074,10 @@
               showHoverPopover(e.currentTarget, term)
             );
             badge.addEventListener("mouseleave", hidePopover);
-            container.appendChild(badge);
-
             if (index < terms.length - 1) {
-              const comma = document.createElement("span");
-              comma.textContent = ", ";
-              container.appendChild(comma);
+              badge.innerHTML += ",";
             }
+            container.appendChild(badge);
           });
         } else {
           container.innerHTML =
