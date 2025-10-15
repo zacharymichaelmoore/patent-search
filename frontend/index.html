@@ -255,7 +255,6 @@
       }
 
       .term-badge {
-        padding: 0.25rem;
         display: inline-flex;
         align-items: center;
         color: black;
@@ -1305,6 +1304,16 @@
           .trim();
       }
 
+      function restoreSearchButton(button) {
+        if (!button) return;
+        button.disabled = false;
+        button.innerHTML = "Search";
+        button.style.display = "";
+        button.style.alignItems = "";
+        button.style.justifyContent = "";
+        button.style.gap = "";
+      }
+
       async function startSearch() {
         const topKInput = document.getElementById("topK");
         if (!topKInput) {
@@ -1332,6 +1341,11 @@
             "A critical UI element is missing. Please check the console for details."
           );
           return;
+        }
+
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
         }
 
         // 1. Reset status message from previous search
@@ -1381,12 +1395,7 @@
             .value.trim();
           if (!description) {
             alert("You must generate terms from invention title first.");
-            searchButton.disabled = false;
-            searchButton.innerHTML = "Search";
-            searchButton.style.display = "";
-            searchButton.style.alignItems = "";
-            searchButton.style.justifyContent = "";
-            searchButton.style.gap = "";
+            restoreSearchButton(searchButton);
             return;
           }
           searchQuery = cleanTextForSearch(description);
@@ -1396,6 +1405,7 @@
           alert(
             "Could not build a search query. Please check your description."
           );
+          restoreSearchButton(searchButton);
           return;
         }
 
@@ -1410,110 +1420,97 @@
         resetSearchProgress();
 
         let resultCount = 0;
-        let buffer = "";
-        let hasReceivedData = false;
-        let error = null;
-        let didReceiveCompleteEvent = false;
+        let hasClearedPlaceholder = false;
+        let hasCompleted = false;
 
-        try {
-          const response = await fetch("/api/search", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userDescription: searchQuery, topK: topK }),
-          });
+        const params = new URLSearchParams({
+          userDescription: searchQuery,
+          topK: String(topK),
+        });
 
-          if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
+        eventSource = new EventSource(`/api/search?${params.toString()}`);
+
+        eventSource.addEventListener("log", (event) => {
+          try {
+            const data = JSON.parse(event.data || "{}");
+            updateSearchProgressFromLog(data.message || "");
+          } catch (err) {
+            console.warn("Failed to parse log event", err);
           }
+        });
 
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i].trim();
-              if (line === "") continue;
-
-              try {
-                const data = JSON.parse(line);
-                if (data.event === "log") {
-                  updateSearchProgressFromLog(data.message || "");
-                  continue;
-                }
-                if (data.event === "error") {
-                  setSearchProgress(
-                    currentProgressPercent,
-                    data.message || "Search error"
-                  );
-                  throw new Error(data.message || "Search error");
-                }
-                if (data.event === "complete") {
-                  didReceiveCompleteEvent = true;
-                  handleSearchComplete(data);
-                  continue;
-                }
-                if (!hasReceivedData) {
-                  resultsContainer.innerHTML = "";
-                  hasReceivedData = true;
-                }
-                if (data.event === "result") {
-                  if (addResult(data.result)) {
-                    resultCount++;
-                  }
-                }
-              } catch (e) {
-                console.warn("Could not parse JSON line:", line);
-              }
+        eventSource.addEventListener("result", (event) => {
+          try {
+            const data = JSON.parse(event.data || "{}");
+            const resultPayload = data.result;
+            if (
+              !resultPayload ||
+              resultPayload.score === null ||
+              resultPayload.score === undefined ||
+              resultPayload.score < 80
+            ) {
+              return;
             }
-            buffer = lines[lines.length - 1];
+
+            if (!hasClearedPlaceholder) {
+              resultsContainer.innerHTML = "";
+              hasClearedPlaceholder = true;
+            }
+
+            if (addResult(resultPayload)) {
+              resultCount++;
+              searchStatusMessage.classList.add("hidden");
+            }
+          } catch (err) {
+            console.warn("Failed to process result event", err);
           }
-        } catch (err) {
-          error = err; // Store the error
-          console.error("Search failed:", error);
+        });
+
+        eventSource.addEventListener("complete", (event) => {
+          if (hasCompleted) return;
+          hasCompleted = true;
+
+          try {
+            const data = JSON.parse(event.data || "{}");
+            handleSearchComplete(data);
+          } catch (err) {
+            console.warn("Failed to parse complete event", err);
+            hideSearchProgress();
+          }
+
+          restoreSearchButton(searchButton);
+
+          if (resultCount > 0) {
+            searchStatusMessage.textContent = `Found ${resultCount} results with a score of 80+.`;
+            downloadButton.classList.remove("hidden");
+          } else {
+            searchStatusMessage.textContent =
+              "No results found with a score of 80 or above.";
+            resultsContainer.innerHTML =
+              '<div class="empty-state">No results found with a score of 80 or above.</div>';
+          }
+          searchStatusMessage.classList.remove("hidden");
+
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+        });
+
+        eventSource.onerror = (event) => {
+          if (hasCompleted) return;
+          console.error("Search stream error:", event);
+          hideSearchProgress();
+          restoreSearchButton(searchButton);
           resultsContainer.innerHTML =
             '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
           searchStatusMessage.textContent = "Search failed. Please try again.";
           searchStatusMessage.classList.remove("hidden");
-          hideSearchProgress();
-        } finally {
-          // <<< FIX 3: The entire 'finally' block was updated to restore the button
-          // and show the final status message. This logic was missing.
-
-          // 3. Re-enable button and restore its original content
-          searchButton.disabled = false;
-          searchButton.innerHTML = "Search";
-          // Remove the dynamic styles
-          searchButton.style.display = "";
-          searchButton.style.alignItems = "";
-          searchButton.style.justifyContent = "";
-          searchButton.style.gap = "";
-
-          // 4. Update and show the status message based on results
-          if (hasReceivedData) {
-            if (resultCount > 0) {
-              searchStatusMessage.textContent = `Found ${resultCount} results with a score of 80+.`;
-              downloadButton.classList.remove("hidden");
-            } else {
-              searchStatusMessage.textContent =
-                "No results found with a score of 80 or above.";
-              resultsContainer.innerHTML =
-                '<div class="empty-state">No results found with a score of 80 or above.</div>';
-            }
-            searchStatusMessage.classList.remove("hidden");
-          } else if (!error) {
-            resultsContainer.innerHTML =
-              '<div class="empty-state">No results were returned.</div>';
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
           }
-          if (!didReceiveCompleteEvent) {
-            hideSearchProgress();
-          }
-        }
+        };
       }
 
       function addResult(result) {

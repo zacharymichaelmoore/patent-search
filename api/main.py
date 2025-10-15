@@ -12,6 +12,7 @@ import json
 import os
 import re
 import httpx
+from typing import Optional, Dict, Any
 
 def _safe_int_env(var_name: str, default: int, minimum: int = 1) -> int:
     raw_value = os.getenv(var_name, str(default))
@@ -51,6 +52,27 @@ OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
 
 _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
+HTTPX_LIMITS = httpx.Limits(
+    max_connections=max(OLLAMA_CONCURRENCY * 2, 1),
+    max_keepalive_connections=max(OLLAMA_CONCURRENCY, 1),
+)
+_httpx_client: Optional[httpx.AsyncClient] = None
+_httpx_client_lock = asyncio.Lock()
+
+
+async def get_httpx_client() -> httpx.AsyncClient:
+    global _httpx_client
+    if _httpx_client is None:
+        async with _httpx_client_lock:
+            if _httpx_client is None:
+                _httpx_client = httpx.AsyncClient(
+                    timeout=OLLAMA_TIMEOUT_SECONDS, limits=HTTPX_LIMITS
+                )
+    return _httpx_client
+
+
+def format_sse(event: str, data: Dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 # ---- HELPERS ----
 
@@ -159,152 +181,85 @@ No extra text.
 
 async def event_stream(user_description, top_k):
     try:
-        yield json.dumps({"event": "log", "message": "[SEARCH] Starting embedding..."}) + "\n"
+        yield format_sse("log", {"message": "[SEARCH] Starting embedding..."})
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
 
-        yield json.dumps({"event": "log", "message": "[SEARCH] Finding candidate patents..."}) + "\n"
+        yield format_sse("log", {"message": "[SEARCH] Finding candidate patents..."})
         fetch_count = max(top_k * QDRANT_FETCH_MULTIPLIER, top_k, 50)
         if QDRANT_FETCH_LIMIT:
             fetch_count = min(fetch_count, QDRANT_FETCH_LIMIT)
         patents = await asyncio.to_thread(qdrant_search, qvec, fetch_count)
 
         if not patents:
-            yield json.dumps({"event": "log", "message": "[SEARCH] No candidates found."}) + "\n"
-            yield json.dumps({"event": "complete", "message": "Search complete", "results": 0, "analyzed": 0}) + "\n"
+            yield format_sse("log", {"message": "[SEARCH] No candidates found."})
+            yield format_sse("complete", {"message": "Search complete", "results": 0, "analyzed": 0})
             return
 
         total_candidates = len(patents)
-        yield json.dumps({"event": "log", "message": f"[SEARCH] Found {total_candidates} candidates, analyzing with concurrency={OLLAMA_CONCURRENCY}..."}) + "\n"
+        yield format_sse("log", {
+            "message": f"[SEARCH] Found {total_candidates} candidates, analyzing with concurrency={OLLAMA_CONCURRENCY}..."
+        })
 
-        indexed_patents = list(enumerate(patents))
-        results_buffer = {}
-        next_emit_index = 0
+        client = await get_httpx_client()
         high_relevance_patents = []
         processed = 0
-        stop_scheduling = False
+        semaphore = asyncio.Semaphore(OLLAMA_CONCURRENCY)
 
-        limits = httpx.Limits(
-            max_connections=max(OLLAMA_CONCURRENCY * 2, 1),
-            max_keepalive_connections=max(OLLAMA_CONCURRENCY, 1),
-        )
+        async def analyze_with_limit(idx, patent):
+            async with semaphore:
+                analyzed = await analyze_patent_with_ollama_async(client, user_description, patent)
+                return idx, analyzed
 
-        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT_SECONDS, limits=limits) as client:
-            semaphore = asyncio.Semaphore(OLLAMA_CONCURRENCY)
+        tasks = [
+            asyncio.create_task(analyze_with_limit(idx, patent))
+            for idx, patent in enumerate(patents)
+        ]
 
-            async def analyze_with_limit(idx, patent):
-                async with semaphore:
-                    analyzed = await analyze_patent_with_ollama_async(client, user_description, patent)
-                    return idx, analyzed
+        cancel_remaining = False
 
-            tasks = set()
-            patent_iter = iter(indexed_patents)
+        try:
+            for future in asyncio.as_completed(tasks):
+                idx, analyzed_patent = await future
+                processed += 1
 
-            # Prime the queue
-            try:
-                for _ in range(min(OLLAMA_CONCURRENCY, total_candidates)):
-                    idx, patent = next(patent_iter)
-                    tasks.add(asyncio.create_task(analyze_with_limit(idx, patent)))
-            except StopIteration:
-                pass
+                if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
+                    yield format_sse("log", {
+                        "message": f"[ANALYZE] Processed {processed}/{total_candidates} candidates"
+                    })
 
-            while tasks and not stop_scheduling:
-                done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                if analyzed_patent.get("score") is not None and analyzed_patent["score"] >= 80:
+                    high_relevance_patents.append(analyzed_patent)
+                    yield format_sse("result", {
+                        "index": len(high_relevance_patents) - 1,
+                        "result": analyzed_patent,
+                        "original_index": idx
+                    })
 
-                for task in done:
-                    idx, analyzed_patent = task.result()
-                    processed += 1
-                    results_buffer[idx] = analyzed_patent
-
-                    if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
-                        yield json.dumps({
-                            "event": "log",
-                            "message": f"[ANALYZE] Processed {processed}/{total_candidates} candidates"
-                        }) + "\n"
-
-                while next_emit_index in results_buffer:
-                    patent_to_emit = results_buffer.pop(next_emit_index)
-                    next_emit_index += 1
-
-                    if patent_to_emit.get("score") is not None and patent_to_emit["score"] >= 80:
-                        high_relevance_patents.append(patent_to_emit)
-                        yield json.dumps({
-                            "event": "result",
-                            "index": len(high_relevance_patents) - 1,
-                            "result": patent_to_emit
-                        }) + "\n"
-
-                        if len(high_relevance_patents) >= top_k:
-                            stop_scheduling = True
-                            break
-
-                if stop_scheduling:
-                    break
-
-                try:
-                    idx, patent = next(patent_iter)
-                    tasks.add(asyncio.create_task(analyze_with_limit(idx, patent)))
-                except StopIteration:
-                    pass
-
-            if stop_scheduling and tasks:
+                    if len(high_relevance_patents) >= top_k:
+                        cancel_remaining = True
+                        break
+        finally:
+            if cancel_remaining:
                 for task in tasks:
-                    task.cancel()
+                    if not task.done():
+                        task.cancel()
                 await asyncio.gather(*tasks, return_exceptions=True)
             else:
-                while tasks:
-                    done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                await asyncio.gather(*tasks, return_exceptions=True)
 
-                    for task in done:
-                        idx, analyzed_patent = task.result()
-                        processed += 1
-                        results_buffer[idx] = analyzed_patent
-
-                        if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
-                            yield json.dumps({
-                                "event": "log",
-                                "message": f"[ANALYZE] Processed {processed}/{total_candidates} candidates"
-                            }) + "\n"
-
-                    while next_emit_index in results_buffer:
-                        patent_to_emit = results_buffer.pop(next_emit_index)
-                        next_emit_index += 1
-
-                        if patent_to_emit.get("score") is not None and patent_to_emit["score"] >= 80:
-                            high_relevance_patents.append(patent_to_emit)
-                            yield json.dumps({
-                                "event": "result",
-                                "index": len(high_relevance_patents) - 1,
-                                "result": patent_to_emit
-                            }) + "\n"
-
-            if not stop_scheduling:
-                while next_emit_index in results_buffer:
-                    patent_to_emit = results_buffer.pop(next_emit_index)
-                    next_emit_index += 1
-
-                    if patent_to_emit.get("score") is not None and patent_to_emit["score"] >= 80:
-                        high_relevance_patents.append(patent_to_emit)
-                        yield json.dumps({
-                            "event": "result",
-                            "index": len(high_relevance_patents) - 1,
-                            "result": patent_to_emit
-                        }) + "\n"
-
-        yield json.dumps({
-            "event": "log",
+        yield format_sse("log", {
             "message": f"[SEARCH] Finished analysis ({len(high_relevance_patents)} results ≥80)"
-        }) + "\n"
-        yield json.dumps({
-            "event": "complete",
+        })
+        yield format_sse("complete", {
             "message": "Search complete",
             "results": len(high_relevance_patents),
             "analyzed": processed
-        }) + "\n"
+        })
 
     except Exception as e:
         import traceback
         print(f"Error in event_stream: {traceback.format_exc()}")
-        yield json.dumps({"event": "error", "message": str(e)}) + "\n"
+        yield format_sse("error", {"message": str(e)})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -342,6 +297,14 @@ async def export_csv(query: str = Query("", alias="userDescription"), topK: int 
     output.seek(0)
     headers = {"Content-Disposition": 'attachment; filename="results.csv"'}
     return StreamingResponse(output, media_type="text/csv", headers=headers)
+
+
+@app.on_event("shutdown")
+async def shutdown_http_client():
+    global _httpx_client
+    if _httpx_client is not None:
+        await _httpx_client.aclose()
+        _httpx_client = None
 
 
 @app.get("/health")
