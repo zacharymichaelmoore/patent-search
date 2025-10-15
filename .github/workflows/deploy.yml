@@ -69,9 +69,9 @@ jobs:
           # The '--build' flag is used only if the image needs to be rebuilt.
           # The '-d' flag runs it in detached mode.
           if [ "${{ steps.check.outputs.rebuild }}" == "true" ]; then
-            docker-compose up --build -d
+            docker compose up --build -d
           else
-            docker-compose up -d
+            docker compose up -d
           fi
           
           echo "--- Deployment successfully completed ---"
