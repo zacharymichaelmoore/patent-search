@@ -1089,7 +1089,7 @@
             );
             badge.addEventListener("mouseleave", hidePopover);
             if (index < terms.length - 1) {
-              badge.innerHTML += ", ";
+              badge.innerHTML += ",";
             }
             container.appendChild(badge);
           });
@@ -1496,14 +1496,10 @@
           restoreSearchButton(searchButton);
 
           if (resultCount > 0) {
-            const highRelevanceCount =
-              typeof data?.high_relevance === "number"
-                ? data.high_relevance
-                : resultCount;
             const totalCandidates =
               typeof data?.total_candidates === "number"
                 ? data.total_candidates
-                : highRelevanceCount;
+                : 0;
             searchStatusMessage.textContent = `Showing ${resultCount} with a score of 80+ (analyzed) out of ${highRelevanceCount} high-confidence matches from ${totalCandidates} initial candidates.`;
             downloadButton.classList.remove("hidden");
           } else {
