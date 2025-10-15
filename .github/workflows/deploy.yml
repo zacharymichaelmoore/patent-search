@@ -43,7 +43,6 @@ jobs:
           echo "--- Navigating to project directory ---"
           cd ~/patent-search
 
-          # <<< FIX: Take ownership of all files in the directory >>>
           # This command changes the owner of all files to the current user.
           # We need sudo because some files are owned by root (from Docker).
           echo "--- Fixing file permissions ---"
@@ -65,13 +64,15 @@ jobs:
             echo "--- Skipping image rebuild (rebuild=false) ---"
           fi
 
-          echo "--- Restarting application container ---"
-          # Stop and remove the old container if it exists
-          docker stop patent-app || true
-          docker rm patent-app || true
-
-          # Start the new container
-          docker run -d -p 8091:8090 --name patent-app patent-app
+          echo "--- Starting application stack with Docker Compose ---"
+          # Use Docker Compose to bring the entire stack up.
+          # The '--build' flag is used only if the image needs to be rebuilt.
+          # The '-d' flag runs it in detached mode.
+          if [ "${{ steps.check.outputs.rebuild }}" == "true" ]; then
+            docker-compose up --build -d
+          else
+            docker-compose up -d
+          fi
           
           echo "--- Deployment successfully completed ---"
           
