@@ -41,7 +41,8 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 templates = Jinja2Templates(directory="frontend")
 
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://172.17.0.1:11434/api/generate")
+OLLAMA_URL = os.getenv(
+    "OLLAMA_URL", "http://host.docker.internal:11434/api/generate")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
 OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 16)
