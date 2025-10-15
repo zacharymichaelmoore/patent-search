@@ -240,8 +240,18 @@
         text-decoration: underline;
       }
 
+      .terms-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+      }
+
       .terms-container {
         align-items: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
       }
 
       .term-badge {
@@ -627,14 +637,27 @@
               >
                 <div class="query-section">
                   <div class="query-label">Devices / Technologies</div>
-                  <div class="terms-container" id="deviceTechTerms"></div>
+                  <div class="terms-section">
+                    <div class="terms-container" id="deviceTechTerms"></div>
+                    <button
+                      class="btn-add-term hidden"
+                      id="addDeviceTermButton"
+                    >
+                      + Add
+                    </button>
+                  </div>
                 </div>
 
                 <div id="andOperator" class="operator-and hidden">AND</div>
 
                 <div class="query-section" id="subjectSection">
                   <div class="query-label">Subjects</div>
-                  <div class="terms-container" id="subjectTerms"></div>
+                  <div class="terms-section">
+                    <div class="terms-container" id="subjectTerms"></div>
+                    <button class="btn-add-term hidden" id="addSubjectTermButton">
+                      + Add
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -766,6 +789,17 @@
       let currentProgressPercent = 0;
       let latestProgressMessage = "";
       let progressHideTimeout = null;
+      const addTermButtons = {
+        device: document.getElementById("addDeviceTermButton"),
+        subject: document.getElementById("addSubjectTermButton"),
+      };
+
+      Object.entries(addTermButtons).forEach(([category, button]) => {
+        if (!button) return;
+        button.addEventListener("click", (e) =>
+          showAddTermPopover(e.currentTarget, category)
+        );
+      });
 
       // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
@@ -1044,8 +1078,7 @@
 
             if (index < terms.length - 1) {
               const comma = document.createElement("span");
-              // operator.className = "operator";
-              comma.textContent = ",";
+              comma.textContent = ", ";
               container.appendChild(comma);
             }
           });
@@ -1054,12 +1087,10 @@
             '<span style="color: #9ca3af; font-size: 1rem;">No terms</span>';
         }
 
-        const addButton = document.createElement("button");
-        addButton.className = "btn-add-term";
-        addButton.textContent = "+ Add";
-        addButton.onclick = (e) =>
-          showAddTermPopover(e.currentTarget, category);
-        container.appendChild(addButton);
+        const addButton = addTermButtons[category];
+        if (addButton) {
+          addButton.classList.remove("hidden");
+        }
       }
 
       function positionPopover(targetElement) {
