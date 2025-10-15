@@ -12,4 +12,4 @@ COPY frontend ./frontend
 
 EXPOSE 8090
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8090"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8090", "--reload"]
