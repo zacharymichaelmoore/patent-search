@@ -1090,7 +1090,7 @@
             );
             badge.addEventListener("mouseleave", hidePopover);
             if (index < terms.length - 1) {
-              badge.innerHTML += ", ";
+              badge.insertAdjacentText("beforeend", ", ");
             }
             container.appendChild(badge);
           });
