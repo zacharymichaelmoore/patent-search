@@ -1089,7 +1089,7 @@
             );
             badge.addEventListener("mouseleave", hidePopover);
             if (index < terms.length - 1) {
-              badge.innerHTML += ",";
+              badge.innerHTML += ", ";
             }
             container.appendChild(badge);
           });
@@ -1602,7 +1602,7 @@
     </div>
   `;
         resultsContainer.insertAdjacentHTML("beforeend", resultHTML);
-        return true; // Indicate that the result was successfully added
+        return true;
       }
       function downloadCSV() {
         const url = `/export_csv?userDescription=${encodeURIComponent(
