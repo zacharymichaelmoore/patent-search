@@ -277,7 +277,8 @@ async def event_stream(user_description, top_k):
             "results": len(high_relevance_patents),
             "analyzed": processed,
             "high_relevance": high_relevance_count,
-            "trimmed": max(high_relevance_count - len(high_relevance_patents), 0)
+            "trimmed": max(high_relevance_count - len(high_relevance_patents), 0),
+            "total_candidates": total_candidates
         })
 
     except Exception as e:

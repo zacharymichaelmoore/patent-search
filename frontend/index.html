@@ -1501,7 +1501,11 @@
               typeof data?.high_relevance === "number"
                 ? data.high_relevance
                 : resultCount;
-            searchStatusMessage.textContent = `Showing ${resultCount} with a score of 80+ out of ${highRelevanceCount}.`;
+            const totalCandidates =
+              typeof data?.total_candidates === "number"
+                ? data.total_candidates
+                : highRelevanceCount;
+            searchStatusMessage.textContent = `Showing ${resultCount} with a score of 80+ (analyzed) out of ${highRelevanceCount} high-confidence matches from ${totalCandidates} initial candidates.`;
             downloadButton.classList.remove("hidden");
           } else {
             searchStatusMessage.textContent =
