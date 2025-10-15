@@ -1550,6 +1550,13 @@
         }
 
         const resultsContainer = document.getElementById("resultsContainer");
+        if (!resultsContainer) return false;
+
+        const existingCards =
+          resultsContainer.querySelectorAll(".result-item").length;
+        if (existingCards >= lastTopK) {
+          return false;
+        }
 
         let scoreClass = "score-low";
         if (numericScore >= 90) {
