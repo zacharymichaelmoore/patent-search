@@ -44,9 +44,8 @@ EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://172.17.0.1:11434/api/generate")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
-OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 8)
-QDRANT_FETCH_LIMIT = _safe_int_env("QDRANT_FETCH_LIMIT", 10000)
-QDRANT_FETCH_MINIMUM = _safe_int_env("QDRANT_FETCH_MINIMUM", 10000)
+OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 15)
+QDRANT_FETCH_COUNT = 50
 ANALYSIS_PROGRESS_INTERVAL = _safe_int_env("ANALYSIS_PROGRESS_INTERVAL", 5)
 OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
 
@@ -199,15 +198,20 @@ No extra text.
 
 
 async def event_stream(user_description, top_k):
+    """
+    Fixed version: 
+    1. Fetch top 50 from Qdrant
+    2. Analyze ALL 50 with LLama
+    3. Sort by score
+    4. Return top 15 (or whatever top_k is)
+    """
     try:
         yield format_sse("log", {"message": "[SEARCH] Starting embedding..."})
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
 
         yield format_sse("log", {"message": "[SEARCH] Finding candidate patents..."})
-        fetch_count = max(top_k, QDRANT_FETCH_MINIMUM)
-        if QDRANT_FETCH_LIMIT:
-            fetch_count = min(fetch_count, QDRANT_FETCH_LIMIT)
-        patents = await asyncio.to_thread(qdrant_search, qvec, fetch_count)
+        # Always fetch exactly 50 candidates from Qdrant
+        patents = await asyncio.to_thread(qdrant_search, qvec, QDRANT_FETCH_COUNT)
 
         if not patents:
             yield format_sse("log", {"message": "[SEARCH] No candidates found."})
@@ -215,15 +219,13 @@ async def event_stream(user_description, top_k):
             return
 
         total_candidates = len(patents)
-        max_analyzed = min(len(patents), top_k)
         yield format_sse("log", {
-            "message": f"[SEARCH] Found {total_candidates} candidates, analyzing with concurrency={OLLAMA_CONCURRENCY}..."
+            "message": f"[SEARCH] Found {total_candidates} candidates, analyzing all with concurrency={OLLAMA_CONCURRENCY}..."
         })
 
         client = await get_httpx_client()
-        high_relevance_patents = []
+        analyzed_patents = []
         processed = 0
-        high_relevance_count = 0
         semaphore = asyncio.Semaphore(OLLAMA_CONCURRENCY)
 
         async def analyze_with_limit(idx, patent):
@@ -231,54 +233,56 @@ async def event_stream(user_description, top_k):
                 analyzed = await analyze_patent_with_ollama_async(client, user_description, patent)
                 return idx, analyzed
 
-        tasks = []
-        for idx, patent in enumerate(patents):
-            if idx >= max_analyzed:
-                break
-            tasks.append(asyncio.create_task(analyze_with_limit(idx, patent)))
+        # Create tasks for ALL 50 patents
+        tasks = [asyncio.create_task(analyze_with_limit(idx, patent))
+                 for idx, patent in enumerate(patents)]
 
-        cancel_remaining = False
+        # Wait for ALL analysis to complete - no early stopping
+        for future in asyncio.as_completed(tasks):
+            idx, analyzed_patent = await future
+            processed += 1
 
-        try:
-            for future in asyncio.as_completed(tasks):
-                idx, analyzed_patent = await future
-                processed += 1
+            if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
+                yield format_sse("log", {
+                    "message": f"[ANALYZE] Processed {processed}/{total_candidates} candidates"
+                })
 
-                if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
-                    yield format_sse("log", {
-                        "message": f"[ANALYZE] Processed {processed}/{total_candidates} candidates"
-                    })
+            # Collect ALL analyzed patents (even if score is low or None)
+            analyzed_patents.append(analyzed_patent)
 
-                if analyzed_patent.get("score") is not None and analyzed_patent["score"] >= 80:
-                    high_relevance_count += 1
-                    high_relevance_patents.append(analyzed_patent)
-                    yield format_sse("result", {
-                        "index": len(high_relevance_patents) - 1,
-                        "result": analyzed_patent,
-                        "original_index": idx
-                    })
+        # Sort by score (highest first), handle None scores by putting them at the end
+        analyzed_patents.sort(
+            key=lambda x: x.get("score") if x.get("score") is not None else -1,
+            reverse=True
+        )
 
-                    if len(high_relevance_patents) >= top_k:
-                        cancel_remaining = True
-                        break
-        finally:
-            if cancel_remaining:
-                for task in tasks:
-                    if not task.done():
-                        task.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
-            else:
-                await asyncio.gather(*tasks, return_exceptions=True)
+        # Take top N results (default 15)
+        top_results = analyzed_patents[:top_k]
+
+        # Stream the top results to frontend
+        for idx, result in enumerate(top_results):
+            yield format_sse("result", {
+                "index": idx,
+                "result": result,
+                "original_index": idx
+            })
+
+        # Count how many of ALL analyzed patents had score >= 80
+        high_relevance_count = sum(1 for p in analyzed_patents if p.get(
+            "score") is not None and p["score"] >= 80)
+
+        # Count how many in our top_k results have score >= 80
+        top_results_high_count = sum(1 for p in top_results if p.get(
+            "score") is not None and p["score"] >= 80)
 
         yield format_sse("log", {
-            "message": f"[SEARCH] Finished analysis ({len(high_relevance_patents)} results ≥80)"
+            "message": f"[SEARCH] Finished analysis. Showing top {len(top_results)} results."
         })
         yield format_sse("complete", {
             "message": "Search complete",
-            "results": len(high_relevance_patents),
+            "results": top_results_high_count,
             "analyzed": processed,
             "high_relevance": high_relevance_count,
-            "trimmed": max(high_relevance_count - len(high_relevance_patents), 0),
             "total_candidates": total_candidates
         })
 
@@ -297,12 +301,12 @@ async def serve_frontend(request: Request):
 async def search_api(request: Request):
     body = await request.json()
     user_description = body.get("userDescription", "")
-    top_k = int(body.get("topK", 100))
+    top_k = int(body.get("topK", 15))  # Changed default to 15
     return StreamingResponse(event_stream(user_description, top_k), media_type="text/event-stream")
 
 
 @app.get("/api/search")
-async def search_stream(userDescription: str = "", topK: int = 100):
+async def search_stream(userDescription: str = "", topK: int = 15):  # Changed default to 15
     """
     GET-based streaming endpoint for EventSource (used by frontend)
     """
@@ -313,7 +317,8 @@ async def search_stream(userDescription: str = "", topK: int = 100):
 
 
 @app.get("/export_csv")
-async def export_csv(query: str = Query("", alias="userDescription"), topK: int = Query(100)):
+# Changed default to 15
+async def export_csv(query: str = Query("", alias="userDescription"), topK: int = Query(15)):
     qvec = await asyncio.to_thread(embed_text_sync, query)
     patents = await asyncio.to_thread(qdrant_search, qvec, topK)
     output = io.StringIO()
