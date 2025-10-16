@@ -1,6 +1,9 @@
 #!/bin/bash
 # download_state_uspto.sh
-# Summarize USPTO data status by year using both download state files and XML presence.
+# Summarize USPTO data status by year using both:
+#   - Download state files (.download_state_YEAR.txt)
+#   - Actual XML presence
+#   - Year distribution from Qdrant embeddings
 # Usage: ./download_state_uspto.sh [DATA_DIR]
 
 set -euo pipefail
@@ -93,6 +96,57 @@ else
   echo "------------------------------------------------------"
   echo "Total files scanned: $file_count"
   echo "Total files with valid year: $processed_count"
+fi
+
+# ======================================================
+# Qdrant integration: check vectorized data per year
+# ======================================================
+echo
+echo "🔍 Checking Qdrant year distribution (if available)..."
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY'
+from qdrant_client import QdrantClient
+from collections import Counter
+import re, sys
+
+try:
+    client = QdrantClient(host="localhost", port=6333)
+    coll = "uspto_patents"
+    scroll, next_offset = client.scroll(collection_name=coll, limit=1000, with_payload=True)
+except Exception as e:
+    print(f"⚠️  Could not connect to Qdrant: {e}")
+    sys.exit(0)
+
+counter = Counter()
+total = 0
+
+while True:
+    for p in scroll:
+        date = p.payload.get("filingDate") or ""
+        match = re.search(r"(19|20)\d{2}", date)
+        if match:
+            counter[match.group(0)] += 1
+        total += 1
+    if not next_offset:
+        break
+    scroll, next_offset = client.scroll(collection_name=coll, limit=1000, with_payload=True, offset=next_offset)
+
+if total == 0:
+    print("⚠️  No data found in Qdrant.")
+else:
+    print("======================================================")
+    print("🧠 Qdrant vectorized patents (by filing year)")
+    print("======================================================")
+    for year, count in sorted(counter.items()):
+        print(f"📅 {year}: {count:,}")
+    print("------------------------------------------------------")
+    print(f"Total patents vectorized: {total:,}")
+except Exception as e:
+    print(f"⚠️  Error during Qdrant check: {e}")
+PY
+else
+  echo "⚠️  Python3 not found; skipping Qdrant check."
 fi
 
 echo
