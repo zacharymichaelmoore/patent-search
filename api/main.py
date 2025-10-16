@@ -47,7 +47,7 @@ OLLAMA_URL = os.getenv(
     "OLLAMA_URL", "http://host.docker.internal:11434/api/generate")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 QDRANT_COLLECTION = "uspto_patents"
-OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 8)
+OLLAMA_CONCURRENCY = _safe_int_env("OLLAMA_CONCURRENCY", 32)
 QDRANT_FETCH_COUNT = _safe_int_env("QDRANT_FETCH_COUNT", 5000)
 HIGH_SCORE_THRESHOLD = _safe_int_env("HIGH_SCORE_THRESHOLD", 90)
 MEDIUM_SCORE_THRESHOLD = _safe_int_env("MEDIUM_SCORE_THRESHOLD", 80)
