@@ -31,7 +31,7 @@ def extract_json_from_text(text: str):
 async def extract_terms(request: ExtractTermsRequest):
     """
     Extract device, technology, and subject terms from patent description text.
-    Uses Ollama (llama3.1:8b) for intelligent term extraction.
+    Uses Ollama (llama3.1-gpu-optimized:latest) for intelligent term extraction.
     """
     document_text = request.documentText
     
@@ -68,7 +68,8 @@ JSON output:
         # Stream request to Ollama
         with requests.post(
             OLLAMA_URL,
-            json={"model": "llama3.1:8b", "prompt": prompt, "stream": True},
+            json={"model": "llama3.1-gpu-optimized:latest",
+                  "prompt": prompt, "stream": True},
             stream=True,
             timeout=60
         ) as response:
