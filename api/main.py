@@ -129,48 +129,33 @@ async def analyze_patent_with_ollama_async(client: httpx.AsyncClient, user_descr
     prompt = f"""
 You are acting as a PATENT ATTORNEY performing prior-art relevance analysis.
 
-TASK
-Given the USER DESCRIPTION (the putative invention) and a CANDIDATE PATENT (title + abstract),
-score how relevant the candidate is as prior art. Think like an examiner/attorney:
-- Prefer references that teach the same COMBINATION of key elements (claim-like features).
-- Consider FIELD OF ENDEAVOR and the PROBLEM ADDRESSED (analogous art).
-- Consider whether the reference could be a plausible 35 U.S.C. §102 (anticipation, single reference) or §103 (obviousness, combination) teaching.
-- Penalize domain/subject mismatches (e.g., humans vs animals) unless the adaptation is straightforward and well-motivated based on the text provided.
+Your goal is to determine how relevant the following patent is as prior art to the user's invention.
 
-IMPORTANT CONSTRAINTS
-- Use only the text provided (title + abstract). Do NOT assume facts not in evidence.
-- Be conservative: if uncertain, lower the score.
-- Output MUST be valid JSON only. No backticks, no extra text.
+Think like an experienced patent attorney:
+- Identify the main inventive concepts and claimed features in the USER DESCRIPTION.
+- Identify the field of endeavor and the technical problem being solved.
+- Compare the CANDIDATE PATENT against these features.
+- Consider whether it could anticipate (teach all essential elements) or render the invention obvious (teach analogous features in a similar context).
+- Penalize cases where the candidate is from a different domain or use case, unless adaptation would be straightforward for someone skilled in the art.
 
-SCORING RUBRIC (0–100)
-Weight the following (sum to 100). Start at 0 and add; apply penalties at the end.
-1) Core feature overlap (40): sensors/algorithms/form factor/processing/communications match the user’s device and workflow.
-2) Problem/Use-case similarity (20): solves a similar problem (e.g., continuous physiological monitoring + alerts).
-3) Field of endeavor / analogous art (15): same or closely related field (e.g., animal wearables vs human wearables). Adjacent medical/wearable fields score, but less.
-4) System integration (10): teaches the combination (not just isolated pieces): power, MCU, BLE/GPS/cloud/app loop, anomaly detection, notifications.
-5) Teachability/enablement (10): the abstract meaningfully teaches how to do it (not just a vague idea).
-6) Form factor fit (5): wearable on body part comparable to a collar (neck/strap) vs. patch/implant/etc.
+Use only the provided text. Be conservative in your scoring.
 
-PENALTIES (apply after base score):
-- Domain/subject mismatch (up to -30): if the user invention is expressly ANIMAL/ CANINE but the patent is clearly HUMAN-only or unrelated species, subtract 10–30 depending on adaptation difficulty. If adaptation seems trivial from the text (e.g., generic “wearable” + general physiology signals) subtract only 5–10.
-- Missing key element(s) (-10 each, max -30): e.g., no vital-sign sensing if that’s core; no communications if core; no on-device processing if core.
-- Non-analogous art (-20): different field and different problem.
+SCORING GUIDELINES:
+0–30: Different field or no meaningful similarity.
+31–60: Some overlapping concepts but missing key features or context.
+61–85: Strong technical overlap or analogous art.
+86–100: Highly relevant prior art that teaches or closely anticipates the same invention.
 
-§102 vs §103 HINT
-- If a single reference appears to teach all essential elements, mark "possible_102": true.
-- If it lacks one or two elements but strongly suggests an obvious combination, mark "possible_103": true.
-- Both can be false.
-
-OUTPUT JSON SCHEMA (only this):
+OUTPUT FORMAT (STRICT JSON ONLY):
 {{
   "score": <integer from 0 to 100>,
-  "reason": "<short explanation>"
+  "reason": "<one short sentence explaining why this score was given>"
 }}
 
 USER DESCRIPTION:
 {user_description}
 
-CANDIDATE PATENT
+CANDIDATE PATENT:
 Title: {patent['title']}
 Abstract: {patent['abstract']}
 """
