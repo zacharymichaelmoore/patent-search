@@ -36,7 +36,7 @@ Write a professional provisional patent description:
                 "POST",
                 OLLAMA_URL,
                 json={
-                    "model": "llama3.1-8gpu:latest",
+                    "model": "llama3.1-gpu-optimized:latest",
                     "prompt": full_prompt,
                     "stream": True,
                 },

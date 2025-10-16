@@ -35,7 +35,7 @@ JSON array:
     try:
         with requests.post(
             OLLAMA_URL,
-            json={"model": "llama3.1-8gpu:latest",
+            json={"model": "llama3.1-gpu-optimized:latest",
                   "prompt": prompt, "stream": True},
             stream=True,
             timeout=30
