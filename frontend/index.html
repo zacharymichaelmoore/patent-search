@@ -1174,7 +1174,7 @@
 
       async function fetchAndDisplayRelated(term, container) {
         container.innerHTML =
-          '<span style="font-size: 0.75rem; color: #9ca3af;">Loading...</span>';
+          '<span style="font-size: 0.75rem; color: #9ca3af;">Loading…</span>';
 
         if (!relatedTermsCache[term]) {
           await fetchRelatedForSingleTerm(term);
@@ -1371,7 +1371,7 @@
         searchButton.disabled = true;
         searchButton.innerHTML = `
     <div class="spinner-small"></div>
-    <span>Searching...</span>
+    <span>Loading...</span>
   `;
         // Add flex styles to center the content
         searchButton.style.display = "flex";

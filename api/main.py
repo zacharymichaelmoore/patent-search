@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from api.routes import extract_terms, generate_description, related_terms
+from api.services.ollama_service import get_next_ollama_url
 import io
 import csv
 import asyncio
@@ -147,8 +148,9 @@ No extra text.
     print(f"--- USING MODEL: llama3.1-8gpu (Version 2) ---")
 
     try:
+        url = get_next_ollama_url()
         response = await client.post(
-            OLLAMA_URL,
+            url,
             json={
                 "model": "llama3.1-gpu-optimized:latest",
                 "prompt": prompt,
@@ -220,7 +222,7 @@ async def event_stream(user_description, top_k):
 
         total_candidates = len(patents)
         yield format_sse("log", {
-            "message": f"[SEARCH] Found {total_candidates} candidates, analyzing all with concurrency={OLLAMA_CONCURRENCY}..."
+            "message": f"[SEARCH] Found {total_candidates} candidates, starting analysis..."
         })
 
         client = await get_httpx_client()
@@ -243,7 +245,7 @@ async def event_stream(user_description, top_k):
 
             if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
                 yield format_sse("log", {
-                    "message": f"[ANALYZE] Processed {processed}/{total_candidates} candidates"
+                    "message": f"[ANALYZE] analyzed {processed}/{total_candidates} highly relevant patents"
                 })
 
             # Collect ALL analyzed patents (even if score is low or None)
