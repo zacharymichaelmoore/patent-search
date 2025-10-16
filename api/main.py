@@ -163,13 +163,8 @@ PENALTIES (apply after base score):
 
 OUTPUT JSON SCHEMA (only this):
 {{
-  "score": <integer 0-100>,
-  "possible_102": <true|false>,
-  "possible_103": <true|false>,
-  "reason": "<one concise sentence capturing why it is (or isn’t) relevant>",
-  "matched_elements": ["<short phrases of key elements matched>"],
-  "missing_elements": ["<short phrases of key elements missing>"],
-  "penalties": ["<short phrases of penalties applied>"]
+  "score": <integer from 0 to 100>,
+  "reason": "<short explanation>"
 }}
 
 USER DESCRIPTION:
