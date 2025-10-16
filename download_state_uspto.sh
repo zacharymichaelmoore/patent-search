@@ -1,6 +1,6 @@
 #!/bin/bash
 # download_state_uspto.sh
-# Summarize which USPTO years you have by scanning XML filenames (no state files required).
+# Summarize USPTO data status by year using both download state files and XML presence.
 # Usage: ./download_state_uspto.sh [DATA_DIR]
 
 set -euo pipefail
@@ -24,8 +24,29 @@ if [ ! -d "$DATA_DIR" ]; then
   exit 1
 fi
 
-# --- Find XMLs and extract years from filenames ---
-echo "📂 Scanning: $DATA_DIR (Progress will appear as dots...)"
+echo "📂 Scanning: $DATA_DIR"
+echo "======================================================"
+
+# --- Show download state file progress ---
+echo "📜 Checking download state files..."
+STATE_FILES=("$DATA_DIR"/.download_state_*.txt)
+FOUND_STATE_FILES=false
+
+for sf in "${STATE_FILES[@]}"; do
+  if [ -f "$sf" ]; then
+    FOUND_STATE_FILES=true
+    YEAR=$(basename "$sf" | grep -oE '[0-9]{4}')
+    COMPLETED=$(wc -l < "$sf" | tr -d ' ')
+    echo "📅 $YEAR — $COMPLETED completed downloads (from state file)"
+  fi
+done
+
+if [ "$FOUND_STATE_FILES" = false ]; then
+  echo "ℹ️ No .download_state_*.txt files found under $DATA_DIR"
+fi
+
+echo
+echo "📦 Checking XML file coverage (this may take a few minutes)..."
 
 declare -A YEAR_COUNTS
 file_count=0
@@ -34,27 +55,21 @@ processed_count=0
 while IFS= read -r -d $'\0' f; do
   ((file_count++))
   
-  # Progress indicator that flushes every 1000 files
-  if (( file_count % 1000 == 0 )); then
+  # progress indicator
+  if (( file_count % 2000 == 0 )); then
     echo -n "."
-    # Add a newline every 80 dots (80,000 files) to keep lines from getting too long
-    if (( file_count % 80000 == 0 )); then
-        echo
-    fi
+    if (( file_count % 80000 == 0 )); then echo; fi
   fi
 
   base="$(basename "$f")"
   y=""
 
-  # ROBUSTNESS FIX: Wrap each pipeline in '(...) || true' to prevent set -e from exiting on failure
+  # Try multiple filename formats
   y=$( (echo "$base" | awk -F'-' '/^.*-[0-9]{8}/ { print substr($NF,1,4) }' | head -n1) || true )
-
   if [ -z "$y" ]; then
     y=$( (echo "$base" | awk '/^US(19|20)[0-9]{2}/ { print substr($0,3,4) }' | head -n1) || true )
   fi
-
   if [ -z "$y" ]; then
-    # ROBUSTNESS FIX: Replaced potentially failing 'grep -P' with a portable awk command
     y=$( (echo "$base" | awk 'match($0, /(19|20)[0-9]{2}/) { print substr($0, RSTART, RLENGTH) }' | head -n1) || true )
   fi
 
@@ -65,25 +80,20 @@ while IFS= read -r -d $'\0' f; do
   fi
 done < <(find "$DATA_DIR" -type f -iname "*.xml" -print0)
 
-echo # Final newline after progress dots
-
-if [ "$processed_count" -eq 0 ]; then
-  if [ "$file_count" -gt 0 ]; then
-    echo "ℹ️  Found $file_count XML files, but could not infer any years from filenames."
-  else
-    echo "ℹ️  No XML files found under $DATA_DIR"
-  fi
-  exit 0
-fi
-
-# --- Print summary sorted by year ---
+echo
 echo "======================================================"
 echo "📊 USPTO XMLs present (by inferred year)"
-echo "Data directory: $DATA_DIR"
 echo "======================================================"
-for y in $(printf "%s\n" "${!YEAR_COUNTS[@]}" | sort -n); do
-  printf "📅 %s — %'d files\n" "$y" "${YEAR_COUNTS[$y]}"
-done
-echo "======================================================"
-echo "Total files scanned: $file_count"
-echo "Total files with valid year: $processed_count"
+if [ "$processed_count" -eq 0 ]; then
+  echo "⚠️  No XML files found under $DATA_DIR"
+else
+  for y in $(printf "%s\n" "${!YEAR_COUNTS[@]}" | sort -n); do
+    printf "📅 %s — %'d XML files\n" "$y" "${YEAR_COUNTS[$y]}"
+  done
+  echo "------------------------------------------------------"
+  echo "Total files scanned: $file_count"
+  echo "Total files with valid year: $processed_count"
+fi
+
+echo
+echo "✅ Scan complete."

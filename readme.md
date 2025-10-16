@@ -21,36 +21,10 @@
 
 ---
 
-## File Structure
-
-```
-~/api
-├── main.py
-└──routes/
-└──services/
-├── requirements.txt
-
-~/vectorization/
-└── vectorize_gpu.py
-
-~/scripts/
-├── setup-ollama.sh
-└── watch_vector_progress.sh
-
-~/qdrant_storage/
-├── collections/
-└── aliases/
-
-/mnt/storage_pool/
-├── uspto/
-├── epo/
-├── cnipa/
-└── download_state/ 
-```
-
 ## Data Workflow
 
-1. **Download**: Bulk patent archives for a specific jurisdiction and year.  
+1. **Download**: The download script uses the uspto bulk api (only uspto for now).
+It downloads the file, then unzips everything and then removes everything except the xml file. 
    - **Script**: `~/patent-search/download-data.sh`  
    - **Example**:  
      ```bash
@@ -96,60 +70,11 @@ export HIGH_SCORE_THRESHOLD=60
 
 ## Deployment
 
-Deployment to the VM is handled automatically whenever changes are pushed to the `main` branch.  
-This is done via a GitHub Actions workflow using SSH and Docker Compose.
+Edit local files and connect to qdrant data through ngrok. This will allow for local testing
+and development.
 
-```yaml
-name: Deploy to VM
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Inspect code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Determine if rebuild is needed
-        id: check
-        run: |
-          echo "Checking if Dockerfile or requirements changed..."
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-          echo "Files changed in this push: $CHANGED_FILES"
-
-          if echo "$CHANGED_FILES" | grep -qE '(^Dockerfile$|^requirements\.txt$)'; then
-            echo "rebuild=true" >> $GITHUB_OUTPUT
-            echo "Rebuild is required."
-          else
-            echo "rebuild=false" >> $GITHUB_OUTPUT
-            echo "Rebuild is not required."
-          fi
-
-      - name: Deploy on VM
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          set -e
-          cd ~/patent-search
-          sudo chown -R $USER:$USER .
-          git fetch origin
-          git reset --hard origin/main
-          sudo docker builder prune -f
-          sudo docker compose down
-          sudo docker compose up --build -d
-          sudo docker image prune -f
-          EOF
-```
+Push to main branch to deploy to vm through a github action. This will run the `docker-compose.yml`
+as opposed to the `docker-compose.dev.yml` which is for local development.
 
 ---
 
