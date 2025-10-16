@@ -254,7 +254,6 @@ async def event_stream(user_description, max_display_results):
             idx, analyzed_patent = await future
             processed += 1
 
-            # Immediately send this analyzed result
             if analyzed_patent.get("score") is not None:
                 yield format_sse("result", {
                     "index": idx,
@@ -268,25 +267,45 @@ async def event_stream(user_description, max_display_results):
                     "message": f"[ANALYZE] Processed {processed}/{total_candidates} patents"
                 })
 
-            # Collect ALL analyzed patents (even if score is low or None)
             analyzed_patents.append(analyzed_patent)
 
-        # Sort by score (highest first), handle None scores by putting them at the end
+        # Sort by score (highest first), handle None at the end
         analyzed_patents.sort(
             key=lambda x: x.get("score") if x.get("score") is not None else -1,
             reverse=True
         )
 
+        # ----- Stats block (inside try!) -----
         scored_patents = [
             p for p in analyzed_patents if p.get("score") is not None]
-        high_confidence_total = [
-            p for p in scored_patents if p["score"] >= HIGH_SCORE_THRESHOLD
-        ]
-        medium_confidence_total = [
-            p for p in scored_patents if p["score"] >= MEDIUM_SCORE_THRESHOLD
-        ]
+        if scored_patents:
+            scores = [p["score"]
+                      for p in scored_patents if isinstance(p["score"], (int, float))]
+            if scores:
+                import statistics
+                avg = round(statistics.mean(scores), 2)
+                med = round(statistics.median(scores), 2)
+                low, high = min(scores), max(scores)
+                print("\n📊 SCORE DISTRIBUTION STATS:")
+                print(f"  Count:  {len(scores)}")
+                print(f"  Range:  {low}–{high}")
+                print(f"  Mean:   {avg}")
+                print(f"  Median: {med}\n")
+                # Optional: also send to UI
+                yield format_sse("log", {
+                    "message": f"[SUMMARY] Score range {low}–{high}, mean={avg}, median={med}"
+                })
+            else:
+                print("⚠️ No valid numeric scores found.")
+        else:
+            print("⚠️ No scored patents to summarize.")
+        # -------------------------------------
 
-        # Take top results above the high threshold
+        high_confidence_total = [
+            p for p in scored_patents if p["score"] >= HIGH_SCORE_THRESHOLD]
+        medium_confidence_total = [
+            p for p in scored_patents if p["score"] >= MEDIUM_SCORE_THRESHOLD]
+
         top_results = high_confidence_total[:max_display_results]
 
         yield format_sse("log", {
