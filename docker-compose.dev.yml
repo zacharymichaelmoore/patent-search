@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_NUM_GPU=1
+    volumes:
+      - /usr/share/ollama:/root/.ollama
+
+  patent-app:
+    build: ./api
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_URL=http://ollama:11434/api/generate
+      - QDRANT_COLLECTION=uspto_patents
+      - OLLAMA_CONCURRENCY=8
+      - QDRANT_FETCH_COUNT=100
+      - HIGH_SCORE_THRESHOLD=60
+    volumes:
+      - ./api:/app        # Mount live code for hot-reload
+      - ./frontend:/app/frontend  # Optional: if index.html lives here
+    command: >
+      uvicorn main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload

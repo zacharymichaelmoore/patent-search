@@ -1,120 +1,165 @@
-# Patent Search VM Setup
+# README
 
-This document outlines the directory structure and data workflow for the patent search engine. The system is designed to download patent data, process it into vector embeddings, and serve it via a search API.
+## System
 
----
+**Downloading and Vectorization**  
+  Downloads bulk patent data and converts it into vector embeddings.
+  TODO: This process will run nightly
 
-## Directory Structure
 
-### `~/patent-search/` (Production Service)
-- **Purpose**: The main patent search API service.
-- **Port**: `8090`
-- **Managed by**: `pm2 list`
-- **Endpoints**:
-  - `POST /api/search` — Performs semantic search for patents.
-  - `POST /api/extract-terms` — Extracts key terms from text using the Ollama backend.
-  - `GET /api/get-status` — Reports job progress or system health.
-  - `GET /health` — Simple health check endpoint.
-- **Config**: `ecosystem.config.js`
-- **Logs**: `pm2 logs search-service`
+**FastAPI Search Service**  
+  Searches vector store and passes too ollama for scoring, returning relevant results.
 
----
+**Single file frontend**  
+  It's just one html file with js and css inlined.
 
-### `~/vectorization/` (Data Processing)
-- **Purpose**: GPU-accelerated Python scripts to convert patent XML data into vector embeddings.
-- **Key Script**: `vectorize_gpu.py`
+**Qdrant**  
+  Vector database for storing the embeddings.
+
+**Ollama**  
+  Hosts and serves a model named `llama3.1-gpu-optimized`
 
 ---
 
-### `~/scripts/` (Utility Scripts)
-- **Purpose**: Helper, setup, and monitoring scripts for the project.
-- **Contains**:
-  - `setup-ollama.sh`: Installs the Ollama service and pulls the required model for the `/api/extract-terms` endpoint.
-  - `watch_vector_progress.sh`: A real-time monitor to track the progress of the vectorization process.
+## File Structure
 
----
+```
+~/api
+├── main.py
+└──routes/
+└──services/
+├── requirements.txt
 
-### `~/qdrant_storage/` (Vector Database)
-- **Purpose**: Persistent storage for the Qdrant vector database.  
-  This directory is mounted into the Qdrant Docker container.  
-  **Do not delete this directory, as it contains all indexed patent data.**
+~/vectorization/
+└── vectorize_gpu.py
 
----
+~/scripts/
+├── setup-ollama.sh
+└── watch_vector_progress.sh
 
-### `/mnt/storage_pool/` (Raw Data Storage)
-- **Purpose**: Unified data pool for storing raw patent data downloaded from various jurisdictions.
-- **Subdirectories**:
-  - `uspto/`, `epo/`, `cnipa/` — Patent data organized by jurisdiction.
-  - `download_state/` — Download logs and state-tracking files.
+~/qdrant_storage/
+├── collections/
+└── aliases/
 
----
+/mnt/storage_pool/
+├── uspto/
+├── epo/
+├── cnipa/
+└── download_state/ 
+```
 
-# Data Workflow Overview
+## Data Workflow
 
-The pipeline automates patent data acquisition, processing, and indexing into Qdrant.
+1. **Download**: Bulk patent archives for a specific jurisdiction and year.  
+   - **Script**: `~/patent-search/download-data.sh`  
+   - **Example**:  
+     ```bash
+     cd ~/patent-search && ./download-data.sh uspto 2024
+     ```
 
----
+2. **Vectorize**: Process the downloaded XML files into vector embeddings and store them in Qdrant.  
+   - **Script**: `~/vectorization/vectorize_gpu.py`  
+   - **Model**: `all-MiniLM-L6-v2` (SentenceTransformer)
 
-## 0. Initial Setup
+## Setup and Configuration
 
-Before starting the data workflow, ensure the base environment is configured by running the setup script:
+### 1. VM and Ollama Setup
 
 ```bash
 ./vm-setup.sh
-```
 
-If you intend to use the `/api/extract-terms` endpoint, you must also install and configure the Ollama service:
-
-```bash
 cd ~/scripts && ./setup-ollama.sh
+
+cat > ~/Modelfile << 'EOF'
+FROM llama3.1:8b-instruct-q6_K
+PARAMETER num_gpu 999
+PARAMETER num_thread 48
+EOF
+
+ollama create llama3.1-gpu-optimized -f ~/Modelfile
 ```
 
 ---
 
-## 1. Download Phase
+### 2. Environment
 
-This phase downloads bulk patent data archives for a specific jurisdiction and year.
-
-**Script:** `~/patent-search/download-data.sh`  
-**Usage:** The script is resumable and will skip already completed files.
-
-**Example:**
 ```bash
-cd ~/patent-search && ./download-data.sh uspto 2024
-```
-
-**Features:**
-- Resumable downloads are tracked via `.download_state_<year>.txt`.
-- Validates `.tar` and extracts nested `.ZIP` archives.
-- Deletes all non-XML files after extraction to conserve disk space.
-- Logs detailed progress to `/mnt/storage_pool/<jurisdiction>/download_<year>.log`.
-
----
-
-## 2. Vectorization Phase
-
-This phase reads the downloaded XML files, converts their text content into vector embeddings using a sentence-transformer model, and saves them to the Qdrant database.
-
-**Script:** `~/vectorization/vectorize_gpu.py`  
-**Usage:** This is a long-running, GPU-intensive process. It is safe to stop and restart; it will skip already indexed files.
-
-**Run Command:**
-```bash
-cd ~/vectorization && python3 vectorize_gpu.py
+export QDRANT_URL="http://localhost:6333"
+export OLLAMA_URL="http://localhost:11434/api/generate"
+export QDRANT_COLLECTION="uspto_patents"
+export OLLAMA_CONCURRENCY=32
+export QDRANT_FETCH_COUNT=100
+export HIGH_SCORE_THRESHOLD=60
 ```
 
 ---
 
-## Monitoring Progress (Optional but Recommended)
+## Deployment
 
-To monitor the progress of the vectorization script, open a new terminal session and run:
+Deployment to the VM is handled automatically whenever changes are pushed to the `main` branch.  
+This is done via a GitHub Actions workflow using SSH and Docker Compose.
 
-```bash
-cd ~/scripts && ./watch_vector_progress.sh
+```yaml
+name: Deploy to VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Determine if rebuild is needed
+        id: check
+        run: |
+          echo "Checking if Dockerfile or requirements changed..."
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          echo "Files changed in this push: $CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -qE '(^Dockerfile$|^requirements\.txt$)'; then
+            echo "rebuild=true" >> $GITHUB_OUTPUT
+            echo "Rebuild is required."
+          else
+            echo "rebuild=false" >> $GITHUB_OUTPUT
+            echo "Rebuild is not required."
+          fi
+
+      - name: Deploy on VM
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
+          cd ~/patent-search
+          sudo chown -R $USER:$USER .
+          git fetch origin
+          git reset --hard origin/main
+          sudo docker builder prune -f
+          sudo docker compose down
+          sudo docker compose up --build -d
+          sudo docker image prune -f
+          EOF
 ```
 
-**Features:**
-- GPU-accelerated via SentenceTransformer.
-- Multi-GPU support for faster processing.
-- Resume-safe; it checks for existing vector IDs in Qdrant before processing.
-- Built-in retry logic for Qdrant upserts to handle temporary network issues.
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| **GET** | `/` | Serves the main HTML frontend |
+| **POST** | `/api/search` | Initiates a patent search and streams results |
+| **POST** | `/api/extract-terms` | Extracts key terms using the LLM |
+| **POST** | `/api/generate-description` | Generates invention descriptions |
+| **GET** | `/health` | Health check endpoint |
+| **GET** | `/export_csv` | Exports search results to CSV |
