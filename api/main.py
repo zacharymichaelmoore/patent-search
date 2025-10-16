@@ -238,14 +238,22 @@ async def event_stream(user_description, top_k):
         tasks = [asyncio.create_task(analyze_with_limit(idx, patent))
                  for idx, patent in enumerate(patents)]
 
-        # Wait for ALL analysis to complete - no early stopping
         for future in asyncio.as_completed(tasks):
             idx, analyzed_patent = await future
             processed += 1
 
+            # Immediately send this analyzed result
+            if analyzed_patent.get("score") is not None:
+                yield format_sse("result", {
+                    "index": idx,
+                    "result": analyzed_patent,
+                    "original_index": idx
+                })
+                await asyncio.sleep(0)
+
             if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
                 yield format_sse("log", {
-                    "message": f"[ANALYZE] analyzed {processed}/{total_candidates} highly relevant patents"
+                    "message": f"[ANALYZE] Processed {processed}/{total_candidates} patents"
                 })
 
             # Collect ALL analyzed patents (even if score is low or None)
@@ -268,14 +276,6 @@ async def event_stream(user_description, top_k):
 
         # Take top results above the high threshold
         top_results = high_confidence_total[:top_k]
-
-        # Stream the top results to frontend
-        for idx, result in enumerate(top_results):
-            yield format_sse("result", {
-                "index": idx,
-                "result": result,
-                "original_index": idx
-            })
 
         yield format_sse("log", {
             "message": f"[SEARCH] Finished analysis. Showing top {len(top_results)} results."
