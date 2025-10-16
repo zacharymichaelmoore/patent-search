@@ -124,8 +124,13 @@ def extract_json_from_text(text):
             return None
 
 
-async def analyze_patent_with_ollama_async(client: httpx.AsyncClient, user_description: str, patent: dict):
-    """Analyzes a single patent asynchronously using httpx."""
+async def analyze_patent_with_ollama_async(
+    client: httpx.AsyncClient, user_description: str, patent: dict
+):
+    """
+    Analyzes a single patent asynchronously using httpx.
+    This function is pure — it should NOT print or log stats.
+    """
     prompt = f"""
 You are acting as a PATENT ATTORNEY performing prior-art relevance analysis.
 
@@ -166,9 +171,9 @@ Abstract: {patent['abstract']}
             json={
                 "model": "llama3.1-gpu-optimized:latest",
                 "prompt": prompt,
-                "stream": False
+                "stream": False,
             },
-            timeout=OLLAMA_TIMEOUT_SECONDS
+            timeout=OLLAMA_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
 
@@ -184,14 +189,14 @@ Abstract: {patent['abstract']}
 
             if score_value is not None:
                 patent["score"] = round(score_value, 2)
-                if "reason" in analysis_json and analysis_json.get("reason"):
-                    patent["reason"] = analysis_json.get("reason")
+                reason = analysis_json.get("reason")
+                if reason:
+                    patent["reason"] = reason
             else:
                 patent.update({
                     "score": None,
                     "reason": "Failed to parse analysis."
                 })
-                return patent
         else:
             patent.update({
                 "score": None,
@@ -203,24 +208,30 @@ Abstract: {patent['abstract']}
     except asyncio.CancelledError:
         raise
     except httpx.RequestError as e:
-        print(f"Error analyzing patent {patent.get('patentNumber')}: {e}")
+        print(
+            f"[ERROR][OLLAMA] Request failed for {patent.get('patentNumber')}: {e}")
         patent.update({
             "score": None,
-            "reason": f"Analysis timed out or failed: {e}"
+            "reason": f"Analysis failed or timed out: {e}"
         })
         return patent
     except Exception as e:
         print(
-            f"General error analyzing patent {patent.get('patentNumber')}: {e}")
+            f"[ERROR][OLLAMA] Unexpected error for {patent.get('patentNumber')}: {e}")
         patent.update({
             "score": None,
-            "reason": f"An unexpected error occurred: {e}"
+            "reason": f"Unexpected error: {e}"
         })
         return patent
 
 
-async def event_stream(user_description, max_display_results):
+async def event_stream(user_description: str, max_display_results: int):
+    """
+    Runs the end-to-end embedding, retrieval, and analysis pipeline.
+    Streams incremental results via SSE to the frontend.
+    """
     try:
+        print("🟣 SEARCH EVENT_STREAM TRIGGERED")
         yield format_sse("log", {"message": "[SEARCH] Starting embedding..."})
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
 
@@ -229,7 +240,11 @@ async def event_stream(user_description, max_display_results):
 
         if not patents:
             yield format_sse("log", {"message": "[SEARCH] No candidates found."})
-            yield format_sse("complete", {"message": "Search complete", "results": 0, "analyzed": 0})
+            yield format_sse("complete", {
+                "message": "Search complete",
+                "results": 0,
+                "analyzed": 0
+            })
             return
 
         total_candidates = len(patents)
@@ -247,13 +262,17 @@ async def event_stream(user_description, max_display_results):
                 analyzed = await analyze_patent_with_ollama_async(client, user_description, patent)
                 return idx, analyzed
 
-        tasks = [asyncio.create_task(analyze_with_limit(idx, patent))
-                 for idx, patent in enumerate(patents)]
+        tasks = [
+            asyncio.create_task(analyze_with_limit(idx, patent))
+            for idx, patent in enumerate(patents)
+        ]
 
+        # Process results as they complete
         for future in asyncio.as_completed(tasks):
             idx, analyzed_patent = await future
             processed += 1
 
+            # Send each result as soon as it's done
             if analyzed_patent.get("score") is not None:
                 yield format_sse("result", {
                     "index": idx,
@@ -262,6 +281,7 @@ async def event_stream(user_description, max_display_results):
                 })
                 await asyncio.sleep(0)
 
+            # Log progress
             if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
                 yield format_sse("log", {
                     "message": f"[ANALYZE] Processed {processed}/{total_candidates} patents"
@@ -269,29 +289,24 @@ async def event_stream(user_description, max_display_results):
 
             analyzed_patents.append(analyzed_patent)
 
-        # Sort by score (highest first), handle None at the end
-        analyzed_patents.sort(
-            key=lambda x: x.get("score") if x.get("score") is not None else -1,
-            reverse=True
-        )
-
-        # ----- Stats block (inside try!) -----
+        # ---- Summarize scores (for debugging / analytics) ----
         scored_patents = [
             p for p in analyzed_patents if p.get("score") is not None]
         if scored_patents:
-            scores = [p["score"]
-                      for p in scored_patents if isinstance(p["score"], (int, float))]
+            scores = [
+                p["score"] for p in scored_patents if isinstance(p["score"], (int, float))
+            ]
             if scores:
                 import statistics
                 avg = round(statistics.mean(scores), 2)
                 med = round(statistics.median(scores), 2)
                 low, high = min(scores), max(scores)
-                print("\n📊 SCORE DISTRIBUTION STATS:")
+                print("\n📊 SCORE DISTRIBUTION STATS (SEARCH):")
                 print(f"  Count:  {len(scores)}")
                 print(f"  Range:  {low}–{high}")
                 print(f"  Mean:   {avg}")
                 print(f"  Median: {med}\n")
-                # Optional: also send to UI
+
                 yield format_sse("log", {
                     "message": f"[SUMMARY] Score range {low}–{high}, mean={avg}, median={med}"
                 })
@@ -299,12 +314,19 @@ async def event_stream(user_description, max_display_results):
                 print("⚠️ No valid numeric scores found.")
         else:
             print("⚠️ No scored patents to summarize.")
-        # -------------------------------------
+        # -------------------------------------------------------
 
+        # Sort & threshold results
+        analyzed_patents.sort(
+            key=lambda x: x.get("score") if x.get("score") is not None else -1,
+            reverse=True,
+        )
         high_confidence_total = [
-            p for p in scored_patents if p["score"] >= HIGH_SCORE_THRESHOLD]
+            p for p in scored_patents if p["score"] >= HIGH_SCORE_THRESHOLD
+        ]
         medium_confidence_total = [
-            p for p in scored_patents if p["score"] >= MEDIUM_SCORE_THRESHOLD]
+            p for p in scored_patents if p["score"] >= MEDIUM_SCORE_THRESHOLD
+        ]
 
         top_results = high_confidence_total[:max_display_results]
 
@@ -323,9 +345,9 @@ async def event_stream(user_description, max_display_results):
 
     except Exception as e:
         import traceback
-        print(f"Error in event_stream: {traceback.format_exc()}")
+        print(
+            f"[ERROR][SEARCH] event_stream failed:\n{traceback.format_exc()}")
         yield format_sse("error", {"message": str(e)})
-
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend(request: Request):
