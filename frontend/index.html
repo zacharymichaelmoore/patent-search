@@ -665,13 +665,13 @@
               </div>
             </div>
             <div class="input-section">
-              <label for="topK"> Number of Results </label>
+              <label for="maxDisplayResults"> Number of Results </label>
               <input
                 type="text"
-                id="topK"
-                value="10"
+                id="maxDisplayResults"
+                value="50"
                 readonly
-                title="Free tier limited to 10 results"
+                title="Free tier limited to 50 results"
               />
             </div>
             <button
@@ -1331,12 +1331,12 @@
       }
 
       async function startSearch() {
-        const topKInput = document.getElementById("topK");
-        if (!topKInput) {
+        const maxDisplayResultsInput = document.getElementById("maxDisplayResults");
+        if (!maxDisplayResultsInput) {
           alert("Error: Could not find the 'topK' input element.");
           return;
         }
-        const topK = parseInt(topKInput.value, 10);
+        const maxDisplayResults = parseInt(maxDisplayResultsInput.value, 10);
 
         const resultsContainer = document.getElementById("resultsContainer");
         const searchButton = document.getElementById("searchButton");
@@ -1440,7 +1440,7 @@
 
         const params = new URLSearchParams({
           userDescription: searchQuery,
-          topK: String(topK),
+          maxDisplayResults: String(maxDisplayResults),
         });
 
         eventSource = new EventSource(`/api/search?${params.toString()}`);

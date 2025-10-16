@@ -207,7 +207,7 @@ No extra text.
         return patent
 
 
-async def event_stream(user_description, top_k):
+async def event_stream(user_description, max_display_results):
     try:
         yield format_sse("log", {"message": "[SEARCH] Starting embedding..."})
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
@@ -275,7 +275,7 @@ async def event_stream(user_description, top_k):
         ]
 
         # Take top results above the high threshold
-        top_results = high_confidence_total[:top_k]
+        top_results = high_confidence_total[:max_display_results]
 
         yield format_sse("log", {
             "message": f"[SEARCH] Finished analysis. Showing top {len(top_results)} results."
@@ -305,26 +305,26 @@ async def serve_frontend(request: Request):
 async def search_api(request: Request):
     body = await request.json()
     user_description = body.get("userDescription", "")
-    top_k = int(body.get("topK", 15))  # Changed default to 15
-    return StreamingResponse(event_stream(user_description, top_k), media_type="text/event-stream")
+    max_display_results = int(body.get("maxDisplayResults", 15))
+    return StreamingResponse(event_stream(user_description, max_display_results), media_type="text/event-stream")
 
 
 @app.get("/api/search")
-async def search_stream(userDescription: str = "", topK: int = 15):  # Changed default to 15
+# Changed default to 15
+async def search_stream(userDescription: str = "", maxDisplayResults: int = 50):
     """
     GET-based streaming endpoint for EventSource (used by frontend)
     """
     return StreamingResponse(
-        event_stream(userDescription, topK),
+        event_stream(userDescription, maxDisplayResults),
         media_type="text/event-stream"
     )
 
 
 @app.get("/export_csv")
-# Changed default to 15
-async def export_csv(query: str = Query("", alias="userDescription"), topK: int = Query(15)):
+async def export_csv(query: str = Query("", alias="userDescription"), maxDisplayResults: int = Query(50)):
     qvec = await asyncio.to_thread(embed_text_sync, query)
-    patents = await asyncio.to_thread(qdrant_search, qvec, topK)
+    patents = await asyncio.to_thread(qdrant_search, qvec, maxDisplayResults)
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=list(patents[0].keys()))
     writer.writeheader()
