@@ -107,6 +107,98 @@ append_vector_log() {
     ) 9>"$VECTOR_LOG_LOCK"
 }
 
+download_redbook_year() {
+    log "Red Book mode enabled for $YEAR (pre-2010)"
+
+    local html index_file
+    html=$(curl -fsSL "https://www.google.com/googlebooks/uspto-patents-redbook.html") || {
+        log "Error: Unable to retrieve Red Book index page."
+        return 1
+    }
+
+    index_file=$(mktemp)
+    printf "%s\n" "$html" \
+        | tr '\r' '\n' \
+        | grep -o "I${YEAR}[0-9]\{4\}\(-SUPP\)\?\.ZIP" \
+        | sort -u > "$index_file"
+
+    if [ ! -s "$index_file" ]; then
+        log "No Red Book entries found for $YEAR."
+        rm -f "$index_file"
+        return 0
+    fi
+
+    declare -A RECORDED_MONTHS=()
+
+    while read -r FILENAME; do
+        [ -z "$FILENAME" ] && continue
+
+        if is_completed "$FILENAME"; then
+            log "Skip: $FILENAME (already completed)"
+            continue
+        fi
+
+        local month="${FILENAME:5:2}"
+        if [ -z "${RECORDED_MONTHS[$month]+x}" ]; then
+            RECORDED_MONTHS[$month]=1
+            record_global_state "$YEAR" "$month"
+            log "Recorded global state for $YEAR-$month"
+        fi
+
+        local TARGET_DIR="$DATA_DIR/${FILENAME%.ZIP}"
+        if [ -d "$TARGET_DIR" ] && find "$TARGET_DIR" -maxdepth 1 -name "*.xml" -print -quit | grep -q .; then
+            log "Skip: $FILENAME (folder '$TARGET_DIR' already contains XML files)"
+            mark_completed "$FILENAME"
+            continue
+        fi
+
+        log "Processing: $FILENAME (Red Book)"
+        local TEMP_ARCHIVE="$DATA_DIR/${FILENAME}.tmp"
+        local FINAL_ARCHIVE="$DATA_DIR/$FILENAME"
+        local URL="https://storage.googleapis.com/patents/redbook/grants/$YEAR/$FILENAME"
+
+        if curl -fsSL -o "$TEMP_ARCHIVE" "$URL"; then
+            mv "$TEMP_ARCHIVE" "$FINAL_ARCHIVE"
+        else
+            log "Failed to download $FILENAME from $URL"
+            rm -f "$TEMP_ARCHIVE"
+            continue
+        fi
+
+        mkdir -p "$TARGET_DIR"
+        if unzip -oq "$FINAL_ARCHIVE" -d "$TARGET_DIR/"; then
+            find "$TARGET_DIR" -type f ! -iname "*.xml" -delete
+            find "$TARGET_DIR" -type d -empty -delete
+        else
+            log "Extraction failed for $FILENAME. Cleaning up."
+            rm -rf "$TARGET_DIR"
+            rm -f "$FINAL_ARCHIVE"
+            continue
+        fi
+
+        rm -f "$FINAL_ARCHIVE"
+
+        local XML_COUNT
+        XML_COUNT=$(find "$TARGET_DIR" -type f -iname "*.xml" | wc -l | tr -d ' ')
+        XML_COUNT=${XML_COUNT:-0}
+        if ! [[ "$XML_COUNT" =~ ^[0-9]+$ ]]; then
+            XML_COUNT=0
+        fi
+
+        if NEW_TOTAL=$(append_vector_log "$YEAR" "$FILENAME" "$XML_COUNT"); then
+            LAST_VECTOR_TOTAL=$NEW_TOTAL
+            log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
+        else
+            log "WARNING: Could not update vectorization log for $FILENAME (added $XML_COUNT)"
+        fi
+
+        mark_completed "$FILENAME"
+        log "Completed: $FILENAME"
+    done < "$index_file"
+
+    rm -f "$index_file"
+}
+
 # ============================================================================
 # ARGUMENT VALIDATION
 # ============================================================================
@@ -173,188 +265,192 @@ fi
 # MAIN DOWNLOAD LOOP
 # ============================================================================
 
-for MONTH in {1..12}; do
-    MONTH_FORMATTED=$(printf "%02d" $MONTH)
-    START_DATE="$YEAR-$MONTH_FORMATTED-01"
-    END_DATE=$(date -d "$START_DATE +1 month -1 day" +%Y-%m-%d 2>/dev/null || \
-               date -v +1m -v -1d -j -f "%Y-%m-%d" "$START_DATE" +%Y-%m-%d)
+if [ "$YEAR" -lt 2010 ]; then
+    download_redbook_year
+else
+    for MONTH in {1..12}; do
+        MONTH_FORMATTED=$(printf "%02d" $MONTH)
+        START_DATE="$YEAR-$MONTH_FORMATTED-01"
+        END_DATE=$(date -d "$START_DATE +1 month -1 day" +%Y-%m-%d 2>/dev/null || \
+                   date -v +1m -v -1d -j -f "%Y-%m-%d" "$START_DATE" +%Y-%m-%d)
 
-    log "======================================================"
-    log "Fetching file list for: $YEAR-$MONTH_FORMATTED"
-    log "Date range: $START_DATE to $END_DATE"
-    log "======================================================"
+        log "======================================================"
+        log "Fetching file list for: $YEAR-$MONTH_FORMATTED"
+        log "Date range: $START_DATE to $END_DATE"
+        log "======================================================"
 
-    # Fetch file list from USPTO API
-    API_RESPONSE=$(curl -s -X GET \
-        "https://api.uspto.gov/api/v1/datasets/products/appdt?fileDataFromDate=$START_DATE&fileDataToDate=$END_DATE&includeFiles=true" \
-        -H 'Accept: application/json' \
-        -H "x-api-key: $USPTO_API_KEY")
-    
-    if [ -z "$API_RESPONSE" ]; then
-        log "Error: Failed to fetch file list for $YEAR-$MONTH_FORMATTED"
-        continue
-    fi
-
-    # ========================================================================
-    # PROCESS FILES (keep only latest revision per week; keep SUPP)
-    # ========================================================================
-    
-    echo "$API_RESPONSE" \
-    | jq -r '.bulkDataProductBag[0].productFileBag.fileDataBag[]?
-             | select(.fileName | endswith(".tar"))
-             | "\(.fileName) \(.fileDownloadURI)"' \
-    | awk '
-        function print_best() {
-            for (k in best) print best[k];
-        }
+        # Fetch file list from USPTO API
+        API_RESPONSE=$(curl -s -X GET \
+            "https://api.uspto.gov/api/v1/datasets/products/appdt?fileDataFromDate=$START_DATE&fileDataToDate=$END_DATE&includeFiles=true" \
+            -H 'Accept: application/json' \
+            -H "x-api-key: $USPTO_API_KEY")
         
-        {
-            fn=$1; uri=$2;
+        if [ -z "$API_RESPONSE" ]; then
+            log "Error: Failed to fetch file list for $YEAR-$MONTH_FORMATTED"
+            continue
+        fi
 
-            # Pass SUPP archives through as-is (unique key per SUPP file)
-            if (fn ~ /^I[0-9]{8}-SUPP.*\.tar$/) {
-                key="SUPP:" fn;
-                best[key]=fn " " uri;
-                next;
+        # ========================================================================
+        # PROCESS FILES (keep only latest revision per week; keep SUPP)
+        # ========================================================================
+        
+        echo "$API_RESPONSE" \
+        | jq -r '.bulkDataProductBag[0].productFileBag.fileDataBag[]?
+                 | select(.fileName | endswith(".tar"))
+                 | "\(.fileName) \(.fileDownloadURI)"' \
+        | awk '
+            function print_best() {
+                for (k in best) print best[k];
             }
-
-            # Track highest _rN for the base week
-            week=substr(fn,2,8);
-            rev=0;
             
-            if (fn ~ /_r[0-9]+\.tar$/) {
-                if (match(fn, /_r([0-9]+)\.tar$/)) {
-                    rev=substr(fn, RSTART+2, RLENGTH-6)+0;
+            {
+                fn=$1; uri=$2;
+
+                # Pass SUPP archives through as-is (unique key per SUPP file)
+                if (fn ~ /^I[0-9]{8}-SUPP.*\.tar$/) {
+                    key="SUPP:" fn;
+                    best[key]=fn " " uri;
+                    next;
+                }
+
+                # Track highest _rN for the base week
+                week=substr(fn,2,8);
+                rev=0;
+                
+                if (fn ~ /_r[0-9]+\.tar$/) {
+                    if (match(fn, /_r([0-9]+)\.tar$/)) {
+                        rev=substr(fn, RSTART+2, RLENGTH-6)+0;
+                    }
+                }
+                
+                key="WEEK:" week;
+                
+                if (!(key in best) || rev > bestrev[key]) {
+                    best[key]=fn " " uri;
+                    bestrev[key]=rev;
                 }
             }
             
-            key="WEEK:" week;
-            
-            if (!(key in best) || rev > bestrev[key]) {
-                best[key]=fn " " uri;
-                bestrev[key]=rev;
+            END {
+                print_best();
             }
-        }
-        
-        END {
-            print_best();
-        }
-    ' \
-    | while read -r FILENAME API_URI; do
-        [ -z "$FILENAME" ] && continue
+        ' \
+        | while read -r FILENAME API_URI; do
+            [ -z "$FILENAME" ] && continue
 
-        # Skip if already completed
-        if is_completed "$FILENAME"; then
-            log "Skip: $FILENAME (already completed)"
-            continue
-        fi
-
-        # Fast-skip if week folder already exists
-        WEEKSTAMP=${FILENAME:1:8}  # I20240125_r1.tar -> 20240125
-        
-        # Determine the target directory for this patent release
-        TARGET_DIR="$DATA_DIR/I$WEEKSTAMP"
-        if [[ "$FILENAME" == *"SUPP"* ]]; then
-            TARGET_DIR="$DATA_DIR/I${WEEKSTAMP}-SUPP"
-        fi
-
-        if [ -d "$TARGET_DIR" ] && find "$TARGET_DIR" -maxdepth 1 -name "*.xml" -print -quit | grep -q .; then
-            log "Skip: $FILENAME (week folder '$TARGET_DIR' already contains XML files)"
-            mark_completed "$FILENAME"
-            continue
-        fi
-
-        log "Processing: $FILENAME"
-        TEMP_TAR="$DATA_DIR/${FILENAME}.tmp"
-        FINAL_TAR="$DATA_DIR/$FILENAME"
-
-        # Rate limit
-        sleep 2
-
-        # Download file
-        if curl -L -f -o "$TEMP_TAR" -X GET "$API_URI" -H "x-api-key: $USPTO_API_KEY"; then
-            log "Download complete: $FILENAME"
-        else
-            ERR=$?
-            if [ $ERR -eq 22 ]; then
-                log "HTTP error (possibly 429) for $FILENAME. Will retry later."
-                sleep 10
-            else
-                log "Failed to download $FILENAME (curl error $ERR). Will retry later."
-            fi
-            rm -f "$TEMP_TAR"
-            continue
-        fi
-
-        # Validate tar file
-        log "Validating $FILENAME"
-        if validate_tar "$TEMP_TAR"; then
-            mv "$TEMP_TAR" "$FINAL_TAR"
-        else
-            log "Corrupt tar: $FILENAME. Will retry later."
-            rm -f "$TEMP_TAR"
-            continue
-        fi
-
-        # Create target directory for this specific release
-        mkdir -p "$TARGET_DIR"
-        log "Extracting $FILENAME to $TARGET_DIR (temporarily all files, then deleting non-XML)"
-        
-        # Extract all files into the specific target directory
-        if tar -xf "$FINAL_TAR" -C "$TARGET_DIR/"; then
-            log "Initial extraction successful: $FILENAME"
-
-            # Extract nested .ZIP files (extract all, then delete non-XML)
-            if command -v unzip >/dev/null 2>&1; then
-                log "Extracting nested .ZIP files (temporarily all files, then deleting non-XML)..."
-                # Find ZIP files within the just-extracted tar directory and unzip them in place
-                find "$TARGET_DIR" -type f -name "*.ZIP" -exec sh -c '
-                    DIRNAME=$(dirname "{}")
-                    unzip -o -d "$DIRNAME" "{}" # Unzip all contents
-                    rm "{}" # Remove the original ZIP file
-                ' \;
-                log "Finished nested .ZIP processing."
-            else
-                log "unzip not found; skipping nested .ZIP extraction."
+            # Skip if already completed
+            if is_completed "$FILENAME"; then
+                log "Skip: $FILENAME (already completed)"
+                continue
             fi
 
-            # --- CRITICAL NEW STEP: DELETE NON-XML FILES ---
-            log "Deleting all non-XML files from $TARGET_DIR and its subdirectories..."
-            # Find and delete files that do NOT end with .xml (case-insensitive)
-            # -depth ensures subdirectories are empty before trying to delete them
-            find "$TARGET_DIR" -type f ! -iname "*.xml" -delete
-            # Also remove any empty directories that might have been created or left after deleting files
-            find "$TARGET_DIR" -type d -empty -delete
-            log "Finished deleting non-XML files."
+            # Fast-skip if week folder already exists
+            WEEKSTAMP=${FILENAME:1:8}  # I20240125_r1.tar -> 20240125
+            
+            # Determine the target directory for this patent release
+            TARGET_DIR="$DATA_DIR/I$WEEKSTAMP"
+            if [[ "$FILENAME" == *"SUPP"* ]]; then
+                TARGET_DIR="$DATA_DIR/I${WEEKSTAMP}-SUPP"
+            fi
 
-        else
-            log "Extraction failed for $FILENAME. Cleaning up $TARGET_DIR and trying again later."
-            rm -rf "$TARGET_DIR" # Remove the potentially incomplete/corrupt directory
+            if [ -d "$TARGET_DIR" ] && find "$TARGET_DIR" -maxdepth 1 -name "*.xml" -print -quit | grep -q .; then
+                log "Skip: $FILENAME (week folder '$TARGET_DIR' already contains XML files)"
+                mark_completed "$FILENAME"
+                continue
+            fi
+
+            log "Processing: $FILENAME"
+            TEMP_TAR="$DATA_DIR/${FILENAME}.tmp"
+            FINAL_TAR="$DATA_DIR/$FILENAME"
+
+            # Rate limit
+            sleep 2
+
+            # Download file
+            if curl -L -f -o "$TEMP_TAR" -X GET "$API_URI" -H "x-api-key: $USPTO_API_KEY"; then
+                log "Download complete: $FILENAME"
+            else
+                ERR=$?
+                if [ $ERR -eq 22 ]; then
+                    log "HTTP error (possibly 429) for $FILENAME. Will retry later."
+                    sleep 10
+                else
+                    log "Failed to download $FILENAME (curl error $ERR). Will retry later."
+                fi
+                rm -f "$TEMP_TAR"
+                continue
+            fi
+
+            # Validate tar file
+            log "Validating $FILENAME"
+            if validate_tar "$TEMP_TAR"; then
+                mv "$TEMP_TAR" "$FINAL_TAR"
+            else
+                log "Corrupt tar: $FILENAME. Will retry later."
+                rm -f "$TEMP_TAR"
+                continue
+            fi
+
+            # Create target directory for this specific release
+            mkdir -p "$TARGET_DIR"
+            log "Extracting $FILENAME to $TARGET_DIR (temporarily all files, then deleting non-XML)"
+            
+            # Extract all files into the specific target directory
+            if tar -xf "$FINAL_TAR" -C "$TARGET_DIR/"; then
+                log "Initial extraction successful: $FILENAME"
+
+                # Extract nested .ZIP files (extract all, then delete non-XML)
+                if command -v unzip >/dev/null 2>&1; then
+                    log "Extracting nested .ZIP files (temporarily all files, then deleting non-XML)..."
+                    # Find ZIP files within the just-extracted tar directory and unzip them in place
+                    find "$TARGET_DIR" -type f -name "*.ZIP" -exec sh -c '
+                        DIRNAME=$(dirname "{}")
+                        unzip -o -d "$DIRNAME" "{}" # Unzip all contents
+                        rm "{}" # Remove the original ZIP file
+                    ' \;
+                    log "Finished nested .ZIP processing."
+                else
+                    log "unzip not found; skipping nested .ZIP extraction."
+                fi
+
+                # --- CRITICAL NEW STEP: DELETE NON-XML FILES ---
+                log "Deleting all non-XML files from $TARGET_DIR and its subdirectories..."
+                # Find and delete files that do NOT end with .xml (case-insensitive)
+                # -depth ensures subdirectories are empty before trying to delete them
+                find "$TARGET_DIR" -type f ! -iname "*.xml" -delete
+                # Also remove any empty directories that might have been created or left after deleting files
+                find "$TARGET_DIR" -type d -empty -delete
+                log "Finished deleting non-XML files."
+
+            else
+                log "Extraction failed for $FILENAME. Cleaning up $TARGET_DIR and trying again later."
+                rm -rf "$TARGET_DIR" # Remove the potentially incomplete/corrupt directory
+                rm -f "$FINAL_TAR"
+                continue
+            fi
+
             rm -f "$FINAL_TAR"
-            continue
-        fi
 
-        rm -f "$FINAL_TAR"
+            XML_COUNT=$(find "$TARGET_DIR" -type f -iname "*.xml" | wc -l | tr -d ' ')
+            XML_COUNT=${XML_COUNT:-0}
+            if ! [[ "$XML_COUNT" =~ ^[0-9]+$ ]]; then
+                XML_COUNT=0
+            fi
+            if NEW_TOTAL=$(append_vector_log "$YEAR" "$FILENAME" "$XML_COUNT"); then
+                LAST_VECTOR_TOTAL=$NEW_TOTAL
+                log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
+            else
+                log "WARNING: Could not update vectorization log for $FILENAME (added $XML_COUNT)"
+            fi
 
-        XML_COUNT=$(find "$TARGET_DIR" -type f -iname "*.xml" | wc -l | tr -d ' ')
-        XML_COUNT=${XML_COUNT:-0}
-        if ! [[ "$XML_COUNT" =~ ^[0-9]+$ ]]; then
-            XML_COUNT=0
-        fi
-        if NEW_TOTAL=$(append_vector_log "$YEAR" "$FILENAME" "$XML_COUNT"); then
-            LAST_VECTOR_TOTAL=$NEW_TOTAL
-            log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
-        else
-            log "WARNING: Could not update vectorization log for $FILENAME (added $XML_COUNT)"
-        fi
+            mark_completed "$FILENAME"
+            log "Completed: $FILENAME"
+        done
 
-        mark_completed "$FILENAME"
-        log "Completed: $FILENAME"
+        record_global_state "$YEAR" "$MONTH_FORMATTED"
+        log "Recorded global state for $YEAR-$MONTH_FORMATTED"
     done
-
-    record_global_state "$YEAR" "$MONTH_FORMATTED"
-    log "Recorded global state for $YEAR-$MONTH_FORMATTED"
-done
+fi
 
 # ============================================================================
 # POST-PROCESSING
