@@ -155,7 +155,7 @@ download_redbook_year() {
         log "Processing: $FILENAME (Red Book)"
         local TEMP_ARCHIVE="$DATA_DIR/${FILENAME}.tmp"
         local FINAL_ARCHIVE="$DATA_DIR/$FILENAME"
-        local URL="https://storage.googleapis.com/patents/redbook/grants/$YEAR/$FILENAME"
+        local URL="http://storage.googleapis.com/patents/redbook/grants/$YEAR/$FILENAME"
 
         if curl -fsSL -o "$TEMP_ARCHIVE" "$URL"; then
             mv "$TEMP_ARCHIVE" "$FINAL_ARCHIVE"
