@@ -35,6 +35,27 @@ It downloads the file, then unzips everything and then removes everything except
    - **Script**: `~/vectorization/vectorize_gpu.py`  
    - **Model**: `all-MiniLM-L6-v2` (SentenceTransformer)
 
+  Make sure to run `chmod +x scripts/vectorize.sh` then add to the ` ~/.bashrc` the following:
+  `alias vectorize='~/patent-search/scripts/vectorize.sh'`
+
+---
+
+## Fresh VM Bootstrap
+
+1. **Clone repo & enter workspace**
+   ```bash
+   git clone <repo-url> ~/patent-search
+   cd ~/patent-search
+   ```
+2. **Run the setup script** (`scripts/vm_setup.sh:1-49`) – installs Docker/Compose, NVIDIA container toolkit, common packages, and prepares `~/qdrant_storage`.
+   ```bash
+   bash scripts/vm_setup.sh
+   ```
+3. **Enable vectorizer alias** – append the alias shown above to `~/.bashrc`, then reload your shell: `source ~/.bashrc`. Log out/in once so Docker group membership takes effect.
+4. **Provision Ollama model** – follow the commands in the next section to install Ollama and create `llama3.1-gpu-optimized`.
+5. **Launch core services** – from the repo root run `docker compose up -d` to start `patent-app` and `qdrant`.
+6. **Vectorization workflow** – place USPTO XML dumps under `/mnt/storage_pool/uspto`, open a screen window, and run `vectorize` to build the container and ingest data into Qdrant.
+
 ## Setup and Configuration
 
 ### 1. VM and Ollama Setup

@@ -10,5 +10,5 @@ docker run --rm --gpus all \
   patent-vectorizer
 
 # make sure to run `chmod +x scripts/vectorize.sh`
-# then add to the ` ~/.bashrc`
+# then add to the ` ~/.bashrc` the following:
 # `alias vectorize='~/patent-search/scripts/vectorize.sh'`
