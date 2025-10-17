@@ -28,8 +28,10 @@ mkdir -p "$GLOBAL_STATE_DIR"
 
 GLOBAL_VECTOR_DIR="/mnt/storage_pool/global"
 VECTOR_LOG="$GLOBAL_VECTOR_DIR/vectorization_log.csv"
+VECTOR_LOG_LOCK="$GLOBAL_VECTOR_DIR/vectorization_log.lock"
 mkdir -p "$GLOBAL_VECTOR_DIR"
 touch "$VECTOR_LOG"
+touch "$VECTOR_LOG_LOCK"
 
 # Load last known total vector-ready XML count
 if [ -s "$VECTOR_LOG" ]; then
@@ -79,6 +81,30 @@ validate_tar() {
     else
         return 1
     fi
+}
+
+append_vector_log() {
+    local year="$1"
+    local filename="$2"
+    local xml_count="$3"
+
+    (
+        flock -w 60 9 || exit 1
+
+        local current_total=0
+        if [ -s "$VECTOR_LOG" ]; then
+            current_total=$(tail -n1 "$VECTOR_LOG" | awk -F',' '{print $5}')
+            if ! [[ "$current_total" =~ ^[0-9]+$ ]]; then
+                current_total=0
+            fi
+        fi
+
+        local new_total=$((current_total + xml_count))
+        local timestamp
+        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+        printf "%s,%s,%s,%d,%d\n" "$timestamp" "$year" "$filename" "$xml_count" "$new_total" >> "$VECTOR_LOG"
+        printf "%s" "$new_total"
+    ) 9>"$VECTOR_LOG_LOCK"
 }
 
 # ============================================================================
@@ -315,9 +341,12 @@ for MONTH in {1..12}; do
         if ! [[ "$XML_COUNT" =~ ^[0-9]+$ ]]; then
             XML_COUNT=0
         fi
-        LAST_VECTOR_TOTAL=$((LAST_VECTOR_TOTAL + XML_COUNT))
-        printf "%s,%s,%s,%d,%d\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$YEAR" "$FILENAME" "$XML_COUNT" "$LAST_VECTOR_TOTAL" >> "$VECTOR_LOG"
-        log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
+        if NEW_TOTAL=$(append_vector_log "$YEAR" "$FILENAME" "$XML_COUNT"); then
+            LAST_VECTOR_TOTAL=$NEW_TOTAL
+            log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
+        else
+            log "WARNING: Could not update vectorization log for $FILENAME (added $XML_COUNT)"
+        fi
 
         mark_completed "$FILENAME"
         log "Completed: $FILENAME"
