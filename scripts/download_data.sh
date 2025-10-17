@@ -26,6 +26,22 @@ GLOBAL_STATE_DIR="/mnt/storage_pool/download_state"
 GLOBAL_LOG="$GLOBAL_STATE_DIR/global_download_log.txt"
 mkdir -p "$GLOBAL_STATE_DIR"
 
+GLOBAL_VECTOR_DIR="/mnt/storage_pool/global"
+VECTOR_LOG="$GLOBAL_VECTOR_DIR/vectorization_log.csv"
+mkdir -p "$GLOBAL_VECTOR_DIR"
+touch "$VECTOR_LOG"
+
+# Load last known total vector-ready XML count
+if [ -s "$VECTOR_LOG" ]; then
+    LAST_VECTOR_TOTAL=$(tail -n1 "$VECTOR_LOG" | awk -F',' '{print $5}')
+else
+    LAST_VECTOR_TOTAL=0
+fi
+LAST_VECTOR_TOTAL=${LAST_VECTOR_TOTAL:-0}
+if ! [[ "$LAST_VECTOR_TOTAL" =~ ^[0-9]+$ ]]; then
+    LAST_VECTOR_TOTAL=0
+fi
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -293,6 +309,16 @@ for MONTH in {1..12}; do
         fi
 
         rm -f "$FINAL_TAR"
+
+        XML_COUNT=$(find "$TARGET_DIR" -type f -iname "*.xml" | wc -l | tr -d ' ')
+        XML_COUNT=${XML_COUNT:-0}
+        if ! [[ "$XML_COUNT" =~ ^[0-9]+$ ]]; then
+            XML_COUNT=0
+        fi
+        LAST_VECTOR_TOTAL=$((LAST_VECTOR_TOTAL + XML_COUNT))
+        printf "%s,%s,%s,%d,%d\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$YEAR" "$FILENAME" "$XML_COUNT" "$LAST_VECTOR_TOTAL" >> "$VECTOR_LOG"
+        log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
+
         mark_completed "$FILENAME"
         log "Completed: $FILENAME"
     done

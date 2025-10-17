@@ -26,7 +26,7 @@ fi
 echo "Installing Docker Compose..."
 sudo apt-get install -y docker-compose-plugin
 sudo apt-get install -y python3 python3-pip python3-venv
-sudo apt-get install -y wget curl unzip git htop
+sudo apt-get install -y wget curl unzip git htop jq bc
 
 # NVIDIA container toolkit for GPU-aware Docker
 echo "Configuring NVIDIA Container Toolkit..."

@@ -1,9 +1,22 @@
 #!/bin/bash
 # watch_vector_progress.sh
-# Monitors Qdrant vectorization progress with ETA estimation
+# Monitors Qdrant vectorization progress with ETA estimation based on download log
 
-TOTAL=454762  # total number of XML files
 QDRANT_URL="http://localhost:6333/collections/uspto_patents"
+VECTOR_LOG="/mnt/storage_pool/global/vectorization_log.csv"
+
+if [ ! -s "$VECTOR_LOG" ]; then
+  echo "⚠️ Vectorization log missing or empty at $VECTOR_LOG"
+  echo "   Run scripts/download_data.sh first to populate the log."
+  exit 1
+fi
+
+TOTAL=$(tail -n1 "$VECTOR_LOG" | awk -F',' '{print $5}')
+TOTAL=${TOTAL:-0}
+if ! [[ "$TOTAL" =~ ^[0-9]+$ ]]; then
+  echo "⚠️ Could not parse total count from $VECTOR_LOG (value: $TOTAL)"
+  exit 1
+fi
 
 echo "📊 Monitoring Qdrant indexing progress..."
 echo "Target: $TOTAL total patents"
@@ -26,6 +39,9 @@ while true; do
     fi
     pct=$(awk "BEGIN {printf \"%.2f\", ($count / $TOTAL) * 100}")
     remaining=$((TOTAL - count))
+    if (( remaining < 0 )); then
+      remaining=0
+    fi
     if (( $(echo "$rate > 0" | bc -l) )); then
       eta_sec=$(awk "BEGIN {printf \"%.0f\", $remaining / $rate}")
       eta_min=$((eta_sec / 60))
