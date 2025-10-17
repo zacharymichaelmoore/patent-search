@@ -1,0 +1,507 @@
+Restarting container without rebuild...
+patent-app
+patent-app
+5ff4741df40be7592ced7ce8ae9890a1830121c8f1d0bf3c8096572ebe932f64
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:33:48 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   d591472..1df5d57  main       -> origin/main
+HEAD is now at 1df5d57 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+14d3c4919a34511221b8ce01eeac4f103ee4794199622c4ff4c935a0a03586ac
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:35:10 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   1df5d57..b0e0647  main       -> origin/main
+HEAD is now at b0e0647 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+fafee10f5a118336b06a89ff818a6a03c9725fe74789e495cc197615286c511c
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:36:40 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   b0e0647..ee944cc  main       -> origin/main
+HEAD is now at ee944cc Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+9bd0c5d6fae30edb528f897f45175c74772c87df96d2fa2000f3236ae520c06c
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:37:43 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   ee944cc..37163c6  main       -> origin/main
+HEAD is now at 37163c6 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+2f45bb5b3121a225805696eb877b86d33322bfb7450735dd5aac4c4ede5dd3e3
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:50:42 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   37163c6..5f50303  main       -> origin/main
+HEAD is now at 5f50303 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+23aaeb7109cdbe43366d8fb44bd9f426395aa2bee9665829150494ed2cf94ff4
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:52:11 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   5f50303..2a8621b  main       -> origin/main
+HEAD is now at 2a8621b Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+0faa91574540deb7739aa704c78846acd49f7dc3a9e5e081d13102ff1bef6682
+Deployment complete (no rebuild).
+---- Tue Oct 14 02:52:48 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   2a8621b..531528b  main       -> origin/main
+HEAD is now at 531528b Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+e69adea88019de82097beffe391a0c5596e8e6b54df9b51e74e99e1abb7c24bd
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:01:37 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   531528b..0ccc264  main       -> origin/main
+HEAD is now at 0ccc264 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+3673837325e52f3c66c292dd6bed5bf860f836aa096734d075e3fcbec9272988
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:04:23 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   0ccc264..ca2447c  main       -> origin/main
+HEAD is now at ca2447c Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+0c97f8f5744bfeb003087c89219e6f1dc004c82e3839c919a0dbf477b8742ede
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:11:58 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   ca2447c..3e4a4a9  main       -> origin/main
+HEAD is now at 3e4a4a9 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+c7fcdf10012d438c510831147336af2b97c4a38506df4fbe6458c794264c4ccf
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:13:15 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   3e4a4a9..892ddd3  main       -> origin/main
+HEAD is now at 892ddd3 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+be22c1a747f9e889a132484d766d205cc185879f7f67f49ee936c09e0a0d1f69
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:16:56 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   892ddd3..26dd206  main       -> origin/main
+HEAD is now at 26dd206 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+c99324061a7c5cc4018084889dcc88e4de32379cb459f0de9469b5aca23409da
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:23:41 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   26dd206..90af4cb  main       -> origin/main
+HEAD is now at 90af4cb Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+373956354a5e83554323b8d0de0882efdc4a742615ca4d6308cd5185d8e0cd4c
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:24:28 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   90af4cb..276efcb  main       -> origin/main
+HEAD is now at 276efcb Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+ab8f8dc8bf605dd97d97117cb097c05c0331af9e8d17b6a5c43bfa7fcbf27585
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:28:09 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   276efcb..6599ea0  main       -> origin/main
+HEAD is now at 6599ea0 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+f89d552401466345bb250b0cfe0bd91c5f36b8a14322a91981c605fb5b34c65a
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:29:10 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   6599ea0..617944c  main       -> origin/main
+HEAD is now at 617944c Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+570e504bf3fcba12fab6630aeb09d89611118cbc55dbff9758b19ae665afbe2a
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:33:27 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   617944c..1037662  main       -> origin/main
+HEAD is now at 1037662 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+7cfb0b85f62c9c5f5eff4bd55a7269637b2a05d7a81e3d93cba23fbc802afe57
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:41:57 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   1037662..fa368a4  main       -> origin/main
+HEAD is now at fa368a4 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+1a22579c5eb2559e82c0a76525a9c0d2984b8a3840ef39e6869653a6ab13ede3
+Deployment complete (no rebuild).
+---- Tue Oct 14 03:42:50 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   fa368a4..2b5f736  main       -> origin/main
+HEAD is now at 2b5f736 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+d96481543beb30c94ad305491ef62038fa4245b74b997cb421602fcf665e9a0a
+Deployment complete (no rebuild).
+---- Tue Oct 14 04:03:07 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   2b5f736..f7abde0  main       -> origin/main
+HEAD is now at f7abde0 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+469fa4af9942995115c4faf809dd873425585c7f817ee17dda827240f60782b1
+Deployment complete (no rebuild).
+---- Tue Oct 14 04:14:24 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   f7abde0..adbff99  main       -> origin/main
+HEAD is now at adbff99 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+a796c3430d1d938ba7862c664ae82efaf82a20262a6af15bc2650fd47e3d7581
+Deployment complete (no rebuild).
+---- Tue Oct 14 04:17:00 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   adbff99..916a612  main       -> origin/main
+HEAD is now at 916a612 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+243c14b6d3abe5025f72a214a1f66553f7265608466bd6c0fcbda9baa8ccf3f0
+Deployment complete (no rebuild).
+---- Tue Oct 14 04:17:37 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   916a612..dc9e6ec  main       -> origin/main
+HEAD is now at dc9e6ec Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+6637ae494e96e0ef4132317d200c61c96263e6cedc52f1ad5c62553ab9f6ed31
+Deployment complete (no rebuild).
+---- Tue Oct 14 04:18:29 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   dc9e6ec..71bd60c  main       -> origin/main
+HEAD is now at 71bd60c Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+77c02fe20771dead54f1b578e04797e25efff8e616dee5676006b3b93b2eaaec
+Deployment complete (no rebuild).
+---- Tue Oct 14 04:28:29 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   71bd60c..7a8f74b  main       -> origin/main
+HEAD is now at 7a8f74b Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+a60dc2270740c86e479c1d85d485cab4dec591de67aea58557afa75efb97dfc9
+Deployment complete (no rebuild).
+---- Tue Oct 14 13:14:28 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   7a8f74b..8aefe1b  main       -> origin/main
+HEAD is now at 8aefe1b updates
+Restarting container without rebuild...
+patent-app
+patent-app
+945e1a631f8d50a02c305fd4a25e6adccdb857ef5ccee36c941492e45a15d8f3
+Deployment complete (no rebuild).
+---- Tue Oct 14 13:30:26 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   8aefe1b..7d3effd  main       -> origin/main
+HEAD is now at 7d3effd updates
+Restarting container without rebuild...
+patent-app
+patent-app
+1c456b446c0f17dbc0eddd2f8d94008a3bc6540124f1b8ee64f3addc043d1667
+Deployment complete (no rebuild).
+---- Tue Oct 14 13:36:32 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   7d3effd..2f4a2c0  main       -> origin/main
+HEAD is now at 2f4a2c0 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+a578ae520a8217a97bb34dcbeb1cfdec7b083afdd88c57388838b2d06e3129cc
+Deployment complete (no rebuild).
+---- Tue Oct 14 13:46:21 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   2f4a2c0..5a32301  main       -> origin/main
+HEAD is now at 5a32301 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+f24a97ea9cdaebade3e01c2b9ee90b91ff915c9217f8a72d831c3f3861d64684
+Deployment complete (no rebuild).
+---- Tue Oct 14 13:51:35 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   5a32301..9f0d793  main       -> origin/main
+HEAD is now at 9f0d793 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+b638094311fc50f9f453e1ee31e7411f42e275c30a35ca1e221a0e4eb8be5ac6
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:06:17 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   9f0d793..71aefaf  main       -> origin/main
+HEAD is now at 71aefaf Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+06148df8aba4410e39c3d5f106917e9499fe4ea4261fe145d8f1d59ecb708123
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:07:12 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   71aefaf..6f4118e  main       -> origin/main
+HEAD is now at 6f4118e Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+1392c977382c3c8b07f0b9ee82261d50a4c1f2def72f42fbaeffcc4a7bf15715
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:19:52 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   6f4118e..2867437  main       -> origin/main
+HEAD is now at 2867437 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+170ec16e1bcb34cbb27b5c230de9d8b9f47aa2e7ae6c0b44fec6be7c7bc9ea3e
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:26:13 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   2867437..ceeb99d  main       -> origin/main
+HEAD is now at ceeb99d Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+a3fcd9d2991834141b7e7ad5463eabc8eb1f1b426a172146518bfedf5cc53933
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:28:57 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   ceeb99d..53dba26  main       -> origin/main
+HEAD is now at 53dba26 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+16314acdaf383f3e29b2716889d8889284dbb6a92e7332eb3d7ae4b70e5894b2
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:34:25 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   53dba26..adf6ce4  main       -> origin/main
+HEAD is now at adf6ce4 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+09a9c02705f164a239856fae00dff0b4e72641800c4c7d49c0490785c690f882
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:39:53 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   adf6ce4..62c1640  main       -> origin/main
+HEAD is now at 62c1640 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+039070f78f268b3ef0f47526ff524e1d708507f7f966dfb2da59701fb9c27c64
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:54:57 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   62c1640..9fbd081  main       -> origin/main
+HEAD is now at 9fbd081 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+4107e4850a01570471da8d2ec5cb7be6377564bed14803c22c4993e66631cf6d
+Deployment complete (no rebuild).
+---- Tue Oct 14 15:58:08 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   9fbd081..54bba63  main       -> origin/main
+HEAD is now at 54bba63 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+4f43fe0ebb760c6d976404861d27cab7cb9370c7db1ee6e27e1453224805e5d3
+Deployment complete (no rebuild).
+---- Tue Oct 14 21:06:26 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   54bba63..0003582  main       -> origin/main
+HEAD is now at 0003582 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+9298f63c3dc316fa8dfb5c0452b277bcf3ceacbc6443f45707b25d50d622a6e6
+Deployment complete (no rebuild).
+---- Tue Oct 14 21:22:38 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   0003582..ee3070f  main       -> origin/main
+HEAD is now at ee3070f Update main.py
+Restarting container without rebuild...
+patent-app
+patent-app
+a0d303d1f28cf75d8a85aee3749ec8b7cfef1cc066ecd79078fd15b1663fc9ea
+Deployment complete (no rebuild).
+---- Tue Oct 14 21:33:51 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   ee3070f..cb3f6fa  main       -> origin/main
+HEAD is now at cb3f6fa updates
+Restarting container without rebuild...
+patent-app
+patent-app
+467bb8811e83c8b43d19d0c6d0ac1b6cbde693b202ee4ca4c3c2fd70387df739
+Deployment complete (no rebuild).
+---- Tue Oct 14 21:42:08 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   cb3f6fa..5c94ca3  main       -> origin/main
+HEAD is now at 5c94ca3 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+b351abdcacee0541b8d6bc2ecf822dfb0bb7b3cd4ccc3ee504afbb07929a3ac1
+Deployment complete (no rebuild).
+---- Tue Oct 14 21:50:57 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   5c94ca3..04b7de1  main       -> origin/main
+HEAD is now at 04b7de1 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+ba3f123112d37e7a887c9290041a5ab460df6ff6af26b0e07162bd2573f55a26
+Deployment complete (no rebuild).
+---- Tue Oct 14 21:58:45 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   04b7de1..4c4b4d8  main       -> origin/main
+HEAD is now at 4c4b4d8 Update index.html
+Restarting container without rebuild...
+patent-app
+patent-app
+ffc26a430d7d98b17e442359a3d34e99272b5c18fbaa66323be5335d51f869ac
+Deployment complete (no rebuild).
+---- Tue Oct 14 22:18:23 UTC 2025 ----
+Pulling latest code...
+From github.com:zacharymichaelmoore/patent-search
+ * branch            main       -> FETCH_HEAD
+   4c4b4d8..f596d8e  main       -> origin/main
+error: unable to unlink old 'api/__pycache__/main.cpython-310.pyc': Permission denied
+fatal: Could not reset index file to revision 'origin/main'.
