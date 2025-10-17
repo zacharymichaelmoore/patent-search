@@ -110,57 +110,76 @@ append_vector_log() {
 download_redbook_year() {
     log "Red Book mode enabled for $YEAR (pre-2010)"
 
+    local base_url="https://bulkdata.uspto.gov/data/patent/application/redbook/fulltext/$YEAR/"
     local html index_file
-    html=$(curl -fsSL "https://www.google.com/googlebooks/uspto-patents-redbook.html") || {
-        log "Error: Unable to retrieve Red Book index page."
+    html=$(curl -fsSL "$base_url") || {
+        log "Error: Unable to retrieve Red Book directory for $YEAR."
         return 1
     }
 
     index_file=$(mktemp)
     printf "%s\n" "$html" \
         | tr '\r' '\n' \
-        | grep -o "I${YEAR}[0-9]\{4\}\(-SUPP\)\?\.ZIP" \
+        | grep -oE 'href="[^"]+\.zip"' \
+        | sed -E 's/href="([^"]+)"/\1/' \
+        | grep -iE '(ipg|pgpub)[0-9]{6,8}.*\.zip$' \
         | sort -u > "$index_file"
 
     if [ ! -s "$index_file" ]; then
-        log "No Red Book entries found for $YEAR."
+        log "No Red Book entries found for $YEAR at $base_url"
         rm -f "$index_file"
         return 0
     fi
 
     declare -A RECORDED_MONTHS=()
 
-    while read -r FILENAME; do
-        [ -z "$FILENAME" ] && continue
+    while read -r RELATIVE; do
+        [ -z "$RELATIVE" ] && continue
 
-        if is_completed "$FILENAME"; then
-            log "Skip: $FILENAME (already completed)"
+        local URL="$RELATIVE"
+        if [[ "$URL" != http* ]]; then
+            URL="${base_url}${URL}"
+        fi
+
+        local BASENAME
+        BASENAME=$(basename "$URL")
+
+        if is_completed "$BASENAME"; then
+            log "Skip: $BASENAME (already completed)"
             continue
         fi
 
-        local month="${FILENAME:5:2}"
+        local month="01"
+        if [[ "$BASENAME" =~ ([0-9]{8}) ]]; then
+            local digits="${BASH_REMATCH[1]}"
+            month="${digits:4:2}"
+        elif [[ "$BASENAME" =~ ([0-9]{6}) ]]; then
+            local digits="${BASH_REMATCH[1]}"
+            month="${digits:2:2}"
+        fi
+
         if [ -z "${RECORDED_MONTHS[$month]+x}" ]; then
             RECORDED_MONTHS[$month]=1
             record_global_state "$YEAR" "$month"
             log "Recorded global state for $YEAR-$month"
         fi
 
-        local TARGET_DIR="$DATA_DIR/${FILENAME%.ZIP}"
+        local TARGET_DIR="$DATA_DIR/${BASENAME%.zip}"
+        TARGET_DIR="${TARGET_DIR%.ZIP}"
         if [ -d "$TARGET_DIR" ] && find "$TARGET_DIR" -maxdepth 1 -name "*.xml" -print -quit | grep -q .; then
-            log "Skip: $FILENAME (folder '$TARGET_DIR' already contains XML files)"
-            mark_completed "$FILENAME"
+            log "Skip: $BASENAME (folder '$TARGET_DIR' already contains XML files)"
+            mark_completed "$BASENAME"
             continue
         fi
 
-        log "Processing: $FILENAME (Red Book)"
-        local TEMP_ARCHIVE="$DATA_DIR/${FILENAME}.tmp"
-        local FINAL_ARCHIVE="$DATA_DIR/$FILENAME"
-        local URL="http://storage.googleapis.com/patents/redbook/grants/$YEAR/$FILENAME"
+        log "Processing: $BASENAME (Red Book)"
+        local TEMP_ARCHIVE="$DATA_DIR/${BASENAME}.tmp"
+        local FINAL_ARCHIVE="$DATA_DIR/$BASENAME"
 
         if curl -fsSL -o "$TEMP_ARCHIVE" "$URL"; then
             mv "$TEMP_ARCHIVE" "$FINAL_ARCHIVE"
         else
-            log "Failed to download $FILENAME from $URL"
+            log "Failed to download $BASENAME from $URL"
             rm -f "$TEMP_ARCHIVE"
             continue
         fi
@@ -170,7 +189,7 @@ download_redbook_year() {
             find "$TARGET_DIR" -type f ! -iname "*.xml" -delete
             find "$TARGET_DIR" -type d -empty -delete
         else
-            log "Extraction failed for $FILENAME. Cleaning up."
+            log "Extraction failed for $BASENAME. Cleaning up."
             rm -rf "$TARGET_DIR"
             rm -f "$FINAL_ARCHIVE"
             continue
@@ -185,15 +204,15 @@ download_redbook_year() {
             XML_COUNT=0
         fi
 
-        if NEW_TOTAL=$(append_vector_log "$YEAR" "$FILENAME" "$XML_COUNT"); then
+        if NEW_TOTAL=$(append_vector_log "$YEAR" "$BASENAME" "$XML_COUNT"); then
             LAST_VECTOR_TOTAL=$NEW_TOTAL
             log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
         else
-            log "WARNING: Could not update vectorization log for $FILENAME (added $XML_COUNT)"
+            log "WARNING: Could not update vectorization log for $BASENAME (added $XML_COUNT)"
         fi
 
-        mark_completed "$FILENAME"
-        log "Completed: $FILENAME"
+        mark_completed "$BASENAME"
+        log "Completed: $BASENAME"
     done < "$index_file"
 
     rm -f "$index_file"
