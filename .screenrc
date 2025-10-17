@@ -1,0 +1,7 @@
+startup_message off
+
+screen -t ngrok bash -lc 'ngrok http 6333'
+screen -t htop htop
+screen -d download
+screen -t nvidia nvidia-smi
+screen -t vm1
