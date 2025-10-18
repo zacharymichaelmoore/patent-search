@@ -134,6 +134,20 @@
         font-family: inherit;
       }
 
+      .markdown-preview p {
+        margin-bottom: 1rem;
+      }
+
+      .markdown-preview p:last-child {
+        margin-bottom: 0;
+      }
+
+      .markdown-preview ul,
+      .markdown-preview ol {
+        margin: 0 0 1rem 1.5rem;
+        padding: 0;
+      }
+
       .input-group {
         display: flex;
         gap: 0.5rem;
@@ -631,7 +645,6 @@
             <textarea
               id="userDescription"
               placeholder="Enter description or it will be auto-generated"
-              style="padding: 2.75rem;"
             ></textarea>
             <div
               id="descriptionPreview"
