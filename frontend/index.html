@@ -615,7 +615,7 @@
             </div>
           </div>
 
-          <div class="input-section">
+          <div class="input-section hidden" id="descriptionSection">
             <label for="userDescription">Description</label>
             <div id="descriptionEditor"></div>
             <textarea
@@ -627,7 +627,7 @@
         </div>
 
         <!-- Right Column -->
-        <div style="padding-left: 4rem">
+        <div id="postGenerateColumn" style="padding-left: 4rem" class="hidden">
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
@@ -811,6 +811,9 @@
         subject: document.getElementById("addSubjectTermButton"),
       };
       const MIN_EDITOR_HEIGHT = 320;
+      const descriptionSection = document.getElementById("descriptionSection");
+      const postGenerateColumn = document.getElementById("postGenerateColumn");
+      let hasUnlockedInterface = false;
 
       Object.entries(addTermButtons).forEach(([category, button]) => {
         if (!button) return;
@@ -903,6 +906,18 @@
         window.location.href = STRIPE_CHECKOUT_URL;
       }
 
+      function showFullInterface() {
+        if (hasUnlockedInterface) return;
+        hasUnlockedInterface = true;
+        if (descriptionSection) {
+          descriptionSection.classList.remove("hidden");
+        }
+        if (postGenerateColumn) {
+          postGenerateColumn.classList.remove("hidden");
+        }
+        adjustEditorHeight();
+      }
+
       async function fetchTotalPatents() {
         try {
           const res = await fetch("/api/stats");
@@ -932,6 +947,7 @@
           return;
         }
 
+        showFullInterface();
         btn.disabled = true;
         btn.textContent = "Generating...";
         isGeneratingDescription = true;
