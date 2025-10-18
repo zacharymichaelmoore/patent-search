@@ -19,7 +19,7 @@
       }
 
       header {
-        padding: 2rem 3.5rem;
+        padding: 2rem 5.5rem;
       }
 
       .header-content {
@@ -77,7 +77,7 @@
       }
 
       .grid {
-        padding: 0 1rem 0;
+        padding: 0 3rem 0;
         display: grid;
         grid-template-columns: 1fr 500px;
       }
@@ -661,16 +661,6 @@
                 </div>
               </div>
             </div>
-            <div class="input-section">
-              <label for="maxDisplayResults"> Number of Results </label>
-              <input
-                type="text"
-                id="maxDisplayResults"
-                value="50"
-                readonly
-                title="Free tier limited to 50 results"
-              />
-            </div>
             <button
               class="btn-primary btn-large"
               onclick="startSearch()"
@@ -781,6 +771,7 @@
         mode: null,
         category: null,
       };
+      let totalPatentsDisplay = null;
       let addTermDebounceTimeout = null;
       let progressTotalCandidates = null;
       let progressAnalyzedCount = 0;
@@ -812,6 +803,26 @@
 
       function unlockPremium() {
         window.location.href = STRIPE_CHECKOUT_URL;
+      }
+
+      async function fetchTotalPatents() {
+        try {
+          const res = await fetch("/api/stats");
+          if (!res.ok) throw new Error(`Status ${res.status}`);
+          const data = await res.json();
+          const total = data?.totalPatents;
+          if (typeof total === "number" && Number.isFinite(total)) {
+            totalPatentsDisplay = total.toLocaleString();
+          } else if (typeof total === "string" && total.trim() !== "") {
+            const parsed = Number.parseInt(total.replace(/,/g, ""), 10);
+            if (!Number.isNaN(parsed)) {
+              totalPatentsDisplay = parsed.toLocaleString();
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch total patent count:", err);
+          totalPatentsDisplay = null;
+        }
       }
 
       async function generateDescription() {
@@ -1505,7 +1516,9 @@
               data && typeof data.total_candidates === "number"
                 ? data.total_candidates
                 : highConfidenceCount;
-            searchStatusMessage.textContent = `Showing ${resultCount} with a score of ${scoreThreshold}+ (analyzed) out of ${highConfidenceCount} high-confidence matches from ${totalCandidates} initial candidates.`;
+            const corpusText =
+              totalPatentsDisplay || "all patents";
+            searchStatusMessage.textContent = `Showing ${resultCount} highly relevant matches from ${corpusText}.`;
             downloadButton.classList.remove("hidden");
           } else {
             searchStatusMessage.textContent =
@@ -1622,6 +1635,8 @@
             startSearch();
           }
         });
+
+      fetchTotalPatents();
     </script>
   </body>
 </html>

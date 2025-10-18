@@ -107,116 +107,6 @@ append_vector_log() {
     ) 9>"$VECTOR_LOG_LOCK"
 }
 
-download_redbook_year() {
-    log "Red Book mode enabled for $YEAR (pre-2010)"
-
-    local base_url="https://bulkdata.uspto.gov/data/patent/application/redbook/fulltext/$YEAR/"
-    local html index_file
-    html=$(curl -fsSL "$base_url") || {
-        log "Error: Unable to retrieve Red Book directory for $YEAR."
-        return 1
-    }
-
-    index_file=$(mktemp)
-    printf "%s\n" "$html" \
-        | tr '\r' '\n' \
-        | grep -oE 'href="[^"]+\.zip"' \
-        | sed -E 's/href="([^"]+)"/\1/' \
-        | grep -iE '(ipg|pgpub)[0-9]{6,8}.*\.zip$' \
-        | sort -u > "$index_file"
-
-    if [ ! -s "$index_file" ]; then
-        log "No Red Book entries found for $YEAR at $base_url"
-        rm -f "$index_file"
-        return 0
-    fi
-
-    declare -A RECORDED_MONTHS=()
-
-    while read -r RELATIVE; do
-        [ -z "$RELATIVE" ] && continue
-
-        local URL="$RELATIVE"
-        if [[ "$URL" != http* ]]; then
-            URL="${base_url}${URL}"
-        fi
-
-        local BASENAME
-        BASENAME=$(basename "$URL")
-
-        if is_completed "$BASENAME"; then
-            log "Skip: $BASENAME (already completed)"
-            continue
-        fi
-
-        local month="01"
-        if [[ "$BASENAME" =~ ([0-9]{8}) ]]; then
-            local digits="${BASH_REMATCH[1]}"
-            month="${digits:4:2}"
-        elif [[ "$BASENAME" =~ ([0-9]{6}) ]]; then
-            local digits="${BASH_REMATCH[1]}"
-            month="${digits:2:2}"
-        fi
-
-        if [ -z "${RECORDED_MONTHS[$month]+x}" ]; then
-            RECORDED_MONTHS[$month]=1
-            record_global_state "$YEAR" "$month"
-            log "Recorded global state for $YEAR-$month"
-        fi
-
-        local TARGET_DIR="$DATA_DIR/${BASENAME%.zip}"
-        TARGET_DIR="${TARGET_DIR%.ZIP}"
-        if [ -d "$TARGET_DIR" ] && find "$TARGET_DIR" -maxdepth 1 -name "*.xml" -print -quit | grep -q .; then
-            log "Skip: $BASENAME (folder '$TARGET_DIR' already contains XML files)"
-            mark_completed "$BASENAME"
-            continue
-        fi
-
-        log "Processing: $BASENAME (Red Book)"
-        local TEMP_ARCHIVE="$DATA_DIR/${BASENAME}.tmp"
-        local FINAL_ARCHIVE="$DATA_DIR/$BASENAME"
-
-        if curl -fsSL -o "$TEMP_ARCHIVE" "$URL"; then
-            mv "$TEMP_ARCHIVE" "$FINAL_ARCHIVE"
-        else
-            log "Failed to download $BASENAME from $URL"
-            rm -f "$TEMP_ARCHIVE"
-            continue
-        fi
-
-        mkdir -p "$TARGET_DIR"
-        if unzip -oq "$FINAL_ARCHIVE" -d "$TARGET_DIR/"; then
-            find "$TARGET_DIR" -type f ! -iname "*.xml" -delete
-            find "$TARGET_DIR" -type d -empty -delete
-        else
-            log "Extraction failed for $BASENAME. Cleaning up."
-            rm -rf "$TARGET_DIR"
-            rm -f "$FINAL_ARCHIVE"
-            continue
-        fi
-
-        rm -f "$FINAL_ARCHIVE"
-
-        local XML_COUNT
-        XML_COUNT=$(find "$TARGET_DIR" -type f -iname "*.xml" | wc -l | tr -d ' ')
-        XML_COUNT=${XML_COUNT:-0}
-        if ! [[ "$XML_COUNT" =~ ^[0-9]+$ ]]; then
-            XML_COUNT=0
-        fi
-
-        if NEW_TOTAL=$(append_vector_log "$YEAR" "$BASENAME" "$XML_COUNT"); then
-            LAST_VECTOR_TOTAL=$NEW_TOTAL
-            log "Vectorization log updated: +$XML_COUNT files (total $LAST_VECTOR_TOTAL)"
-        else
-            log "WARNING: Could not update vectorization log for $BASENAME (added $XML_COUNT)"
-        fi
-
-        mark_completed "$BASENAME"
-        log "Completed: $BASENAME"
-    done < "$index_file"
-
-    rm -f "$index_file"
-}
 
 # ============================================================================
 # ARGUMENT VALIDATION
@@ -275,19 +165,21 @@ log "Starting ${JURISDICTION^^} data download for year: $YEAR"
 log "State file: $STATE_FILE"
 log "======================================================"
 
+if [ "$YEAR" -lt 2010 ]; then
+    log "ERROR: Automatic downloads only supported for 2010 and later. Skipping $YEAR."
+    exit 1
+fi
+
 if [ -s "$STATE_FILE" ]; then
     COMPLETED_COUNT=$(wc -l < "$STATE_FILE")
     log "Resuming from state file with $COMPLETED_COUNT completed downloads"
 fi
 
 # ============================================================================
-# MAIN DOWNLOAD LOOP
+# MAIN DOWNLOAD LOOP (2010+ via USPTO API)
 # ============================================================================
 
-if [ "$YEAR" -lt 2010 ]; then
-    download_redbook_year
-else
-    for MONTH in {1..12}; do
+for MONTH in {1..12}; do
         MONTH_FORMATTED=$(printf "%02d" $MONTH)
         START_DATE="$YEAR-$MONTH_FORMATTED-01"
         END_DATE=$(date -d "$START_DATE +1 month -1 day" +%Y-%m-%d 2>/dev/null || \
@@ -468,8 +360,7 @@ else
 
         record_global_state "$YEAR" "$MONTH_FORMATTED"
         log "Recorded global state for $YEAR-$MONTH_FORMATTED"
-    done
-fi
+done
 
 # ============================================================================
 # POST-PROCESSING

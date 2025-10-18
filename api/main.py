@@ -14,6 +14,7 @@ import os
 import re
 import httpx
 from typing import Optional, Dict, Any
+from collections import deque
 
 
 def _safe_int_env(var_name: str, default: int, minimum: int = 1) -> int:
@@ -54,6 +55,9 @@ HIGH_SCORE_THRESHOLD = _safe_int_env("HIGH_SCORE_THRESHOLD", 60)
 MEDIUM_SCORE_THRESHOLD = _safe_int_env("MEDIUM_SCORE_THRESHOLD", 80)
 ANALYSIS_PROGRESS_INTERVAL = _safe_int_env("ANALYSIS_PROGRESS_INTERVAL", 1)
 OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
+VECTOR_LOG_PATH = os.getenv(
+    "VECTOR_LOG_PATH", "/mnt/storage_pool/global/vectorization_log.csv"
+)
 
 _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
@@ -80,6 +84,21 @@ def format_sse(event: str, data: Dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 # ---- HELPERS ----
+def read_total_patents_from_log() -> Optional[int]:
+    try:
+        if not os.path.exists(VECTOR_LOG_PATH):
+            return None
+        with open(VECTOR_LOG_PATH, "r", encoding="utf-8") as log_file:
+            line = deque(log_file, maxlen=1)
+        if not line:
+            return None
+        parts = line[0].strip().split(",")
+        if len(parts) < 5:
+            return None
+        total_str = parts[4].strip()
+        return int(total_str)
+    except (OSError, ValueError):
+        return None
 
 
 def embed_text_sync(text: str):
@@ -398,3 +417,9 @@ async def shutdown_http_client():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/stats")
+def stats():
+    total = read_total_patents_from_log()
+    return {"totalPatents": total}
