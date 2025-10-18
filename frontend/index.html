@@ -810,6 +810,7 @@
         device: document.getElementById("addDeviceTermButton"),
         subject: document.getElementById("addSubjectTermButton"),
       };
+      const MIN_EDITOR_HEIGHT = 320;
 
       Object.entries(addTermButtons).forEach(([category, button]) => {
         if (!button) return;
@@ -835,6 +836,56 @@
       });
       let isGeneratingDescription = false;
 
+      function adjustEditorHeight() {
+        const editorRoot = document.getElementById("descriptionEditor");
+        if (!editorRoot) return;
+        const defaultUI =
+          editorRoot.querySelector(".toastui-editor-defaultUI");
+        if (!defaultUI) return;
+
+        const toolbar = defaultUI.querySelector(".toastui-editor-toolbar");
+        const modeSwitch = defaultUI.querySelector(".toastui-editor-mode-switch");
+        const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+        const modeSwitchHeight = modeSwitch ? modeSwitch.offsetHeight : 0;
+        const mode = descriptionEditor.getCurrentMode();
+
+        let contentContainer = null;
+        if (mode === "wysiwyg") {
+          contentContainer = defaultUI.querySelector(
+            ".toastui-editor-ww-container"
+          );
+        } else {
+          contentContainer = defaultUI.querySelector(
+            ".toastui-editor-md-container"
+          );
+        }
+        if (!contentContainer) return;
+
+        let contentHeight = contentContainer.scrollHeight;
+        if (mode === "wysiwyg") {
+          const wysiwygBody = contentContainer.querySelector(
+            ".toastui-editor-contents"
+          );
+          if (wysiwygBody) {
+            contentHeight = wysiwygBody.scrollHeight;
+          }
+        } else {
+          const markdownTextarea = defaultUI.querySelector(
+            ".toastui-editor-md-textarea"
+          );
+          if (markdownTextarea) {
+            contentHeight = markdownTextarea.scrollHeight;
+          }
+        }
+
+        const extraPadding = 48;
+        const targetHeight = Math.max(
+          contentHeight + toolbarHeight + modeSwitchHeight + extraPadding,
+          MIN_EDITOR_HEIGHT
+        );
+        descriptionEditor.setHeight(`${targetHeight}px`);
+      }
+
       if (descriptionTextarea) {
         descriptionTextarea.value = descriptionEditor.getMarkdown();
       }
@@ -851,6 +902,7 @@
         extractTimeout = setTimeout(() => {
           extractTerms(markdown);
         }, 2000);
+        adjustEditorHeight();
       });
 
       descriptionEditor.on("keydown", (event) => {
@@ -858,6 +910,7 @@
           startSearch();
         }
       });
+      adjustEditorHeight();
 
       // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
@@ -903,6 +956,7 @@
         if (descriptionTextarea) {
           descriptionTextarea.value = "";
         }
+        adjustEditorHeight();
 
         try {
           const response = await fetch("/api/generate-description", {
@@ -922,12 +976,14 @@
             if (descriptionTextarea) {
               descriptionTextarea.value = generatedMarkdown;
             }
+            adjustEditorHeight();
           }
           generatedMarkdown += decoder.decode();
           descriptionEditor.setMarkdown(generatedMarkdown, false);
           if (descriptionTextarea) {
             descriptionTextarea.value = generatedMarkdown;
           }
+          adjustEditorHeight();
 
           isGeneratingDescription = false;
           extractTerms(generatedMarkdown);
