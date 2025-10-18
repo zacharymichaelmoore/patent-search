@@ -349,9 +349,6 @@ async def event_stream(user_description: str, max_display_results: int):
 
         top_results = high_confidence_total[:max_display_results]
 
-        yield format_sse("log", {
-            "message": f"[SEARCH] Finished analysis. Showing top {len(top_results)} results."
-        })
         yield format_sse("complete", {
             "message": "Search complete",
             "results": len(top_results),
