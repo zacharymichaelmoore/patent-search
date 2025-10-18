@@ -79,7 +79,7 @@
       .grid {
         padding: 0 3rem 0;
         display: grid;
-        grid-template-columns: 1fr 500px;
+        grid-template-columns: 1fr 450px;
       }
 
       @media (max-width: 1024px) {
@@ -123,13 +123,12 @@
       }
 
       .view-toggle {
-        margin-bottom: 0.5rem;
         text-align: right;
       }
       .markdown-preview {
         padding: 0.75rem;
-        background-color: ghostwhite;
-        border: 1px solid ghostwhite;
+        background-color: white;
+        border: 1px solid white;
         border-radius: 0.5rem;
         font-size: 1rem;
         font-family: inherit;
@@ -624,7 +623,7 @@
             <div style="display: flex;">
             <label for="userDescription">Description</label>
             <div class="view-toggle">
-              <button type="button" id="viewToggleBtn" class="btn-tertiary">
+              <button type="button" id="viewToggleBtn" class="btn-tertiary" style="font-size: 0.75rem;">
                 Show Formatted
               </button>
             </div>
@@ -641,7 +640,7 @@
         </div>
 
         <!-- Right Column -->
-        <div style="padding-left: 5rem">
+        <div style="padding-left: 4rem">
           <!-- Query Builder -->
           <div class="card">
             <h2 class="card-title">
