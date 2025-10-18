@@ -303,7 +303,7 @@ async def event_stream(user_description: str, max_display_results: int):
             # Log progress
             if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
                 yield format_sse("log", {
-                    "message": f"[ANALYZE] processing patents"
+                    "message": f"[ANALYZE] Processing patents…"
                 })
 
             analyzed_patents.append(analyzed_patent)

@@ -907,6 +907,7 @@
           if (showingFormatted) {
             renderMarkdownPreview(textarea.value);
           }
+          setView(true);
           extractTerms(textarea.value);
         } catch (err) {
           console.error("Error:", err);
