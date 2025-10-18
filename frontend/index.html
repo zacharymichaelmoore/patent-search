@@ -127,9 +127,12 @@
         text-align: right;
       }
       .markdown-preview {
-        margin: 0.5rem;
-        padding: 1.25rem;
-        color: blue;
+        padding: 0.75rem;
+        background-color: ghostwhite;
+        border: 1px solid ghostwhite;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-family: inherit;
       }
 
       .input-group {
@@ -204,11 +207,19 @@
       .btn-secondary {
         background: white;
         border: 1px solid #d1d5db;
-        color: #374151;
+        color: black;
       }
 
       .btn-secondary:hover {
         background: #f9fafb;
+      }
+
+       .btn-tertiary {
+        color: black;
+        background: none;
+        border: none;
+        padding: 0px;
+        color: blue;
       }
 
       .btn-premium {
@@ -610,11 +621,13 @@
           </div>
 
           <div class="input-section">
+            <div style="display: flex;">
             <label for="userDescription">Description</label>
             <div class="view-toggle">
-              <button type="button" id="viewToggleBtn" class="btn-secondary">
+              <button type="button" id="viewToggleBtn" class="btn-tertiary">
                 Show Formatted
               </button>
+            </div>
             </div>
             <textarea
               id="userDescription"
