@@ -251,7 +251,7 @@ async def event_stream(user_description: str, max_display_results: int):
     """
     try:
         print("🟣 SEARCH EVENT_STREAM TRIGGERED")
-        yield format_sse("log", {"message": "[SEARCH] Starting embedding..."})
+        yield format_sse("log", {"message": "[SEARCH] Starting search..."})
         qvec = await asyncio.to_thread(embed_text_sync, user_description)
 
         yield format_sse("log", {"message": "[SEARCH] Finding candidate patents..."})

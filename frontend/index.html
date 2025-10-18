@@ -36,7 +36,7 @@
         padding: 0.375rem 0.75rem;
         background: transparent;
         color: black;
-        border: 1px dashed gainsboro;
+        border: 1px solid gainsboro;
         border-radius: 0.5rem;
         font-size: 1rem;
         cursor: pointer;
@@ -122,6 +122,16 @@
         margin-bottom: 0.25rem;
       }
 
+      .view-toggle {
+        margin-bottom: 0.5rem;
+        text-align: right;
+      }
+      .markdown-preview {
+        margin: 0.5rem;
+        padding: 1.25rem;
+        color: blue;
+      }
+
       .input-group {
         display: flex;
         gap: 0.5rem;
@@ -176,14 +186,14 @@
         color: black;
         background-color: none;
         border-radius: 0.5rem;
-        border: 1px dashed gainsboro;
+        border: 1px solid gainsboro;
         font-family: serif;
       }
 
       .btn-primary:hover:not(:disabled) {
         background: gainsboro !important;
         transition: all 0.1s;
-        border: 1px dashed gainsboro;
+        border: 1px solid gainsboro;
       }
 
       .btn-primary:disabled {
@@ -601,10 +611,19 @@
 
           <div class="input-section">
             <label for="userDescription">Description</label>
+            <div class="view-toggle">
+              <button type="button" id="viewToggleBtn" class="btn-secondary">
+                Show Formatted
+              </button>
+            </div>
             <textarea
               id="userDescription"
               placeholder="Enter description or it will be auto-generated"
             ></textarea>
+            <div
+              id="descriptionPreview"
+              class="markdown-preview hidden"
+            ></div>
           </div>
         </div>
 
@@ -628,7 +647,7 @@
               <div
                 id="queryPreview"
                 class="hidden"
-                style="padding: 1.5rem; border: 1px solid gainsboro"
+                style="padding: 1.5rem; border: 1px dashed gainsboro"
               >
                 <div class="query-section">
                   <div class="query-label">Devices / Technologies</div>
@@ -657,23 +676,23 @@
                     </button>
                   </div>
                 </div>
+              </div>
             </div>
-          </div>
-          <div class="input-section" style="display: none;">
-            <label for="maxDisplayResults">Max results to display</label>
-            <input
-              type="number"
-              id="maxDisplayResults"
-              min="1"
-              max="1000"
-              value="100"
-            />
-          </div>
-          <button
-            class="btn-primary btn-large"
-            onclick="startSearch()"
-            id="searchButton"
-            style="margin-top: 1rem"
+            <div class="input-section" style="display: none">
+              <label for="maxDisplayResults">Max results to display</label>
+              <input
+                type="number"
+                id="maxDisplayResults"
+                min="1"
+                max="1000"
+                value="100"
+              />
+            </div>
+            <button
+              class="btn-primary btn-large"
+              onclick="startSearch()"
+              id="searchButton"
+              style="margin-top: 1rem"
             >
               Search
             </button>
@@ -760,6 +779,9 @@
 
       <div id="relatedTermsContainer" class="related-terms"></div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.3/dist/purify.min.js"></script>
 
     <script>
       let eventSource = null;
@@ -864,8 +886,14 @@
             textarea.value += decoder.decode(value);
             autoResizeDescription(textarea);
             textarea.scrollTop = textarea.scrollHeight;
+            if (showingFormatted) {
+              renderMarkdownPreview(textarea.value);
+            }
           }
 
+          if (showingFormatted) {
+            renderMarkdownPreview(textarea.value);
+          }
           extractTerms(textarea.value);
         } catch (err) {
           console.error("Error:", err);
@@ -880,11 +908,37 @@
         .getElementById("userDescription")
         .addEventListener("input", (e) => {
           autoResizeDescription(e.target);
+          if (showingFormatted) {
+            renderMarkdownPreview(e.target.value);
+          }
           clearTimeout(extractTimeout);
           extractTimeout = setTimeout(() => {
             extractTerms(e.target.value);
           }, 2000);
         });
+
+      const viewToggleBtn = document.getElementById("viewToggleBtn");
+      const descriptionTextarea = document.getElementById("userDescription");
+      const descriptionPreview = document.getElementById("descriptionPreview");
+      let showingFormatted = false;
+
+      function renderMarkdownPreview(markdown) {
+        descriptionPreview.innerHTML = DOMPurify.sanitize(
+          marked.parse(markdown || "")
+        );
+      }
+
+      function setView(formatted) {
+        showingFormatted = formatted;
+        descriptionTextarea.classList.toggle("hidden", formatted);
+        descriptionPreview.classList.toggle("hidden", !formatted);
+        viewToggleBtn.textContent = formatted
+          ? "Show Markdown"
+          : "Show Formatted";
+        if (formatted) renderMarkdownPreview(descriptionTextarea.value);
+      }
+
+      viewToggleBtn.addEventListener("click", () => setView(!showingFormatted));
 
       async function extractTerms(text) {
         if (!text || text.trim().length < 20) {
@@ -1008,7 +1062,7 @@
         const cleanMessage = formatProgressMessage(message);
         let percent = null;
 
-        if (/starting embedding/i.test(cleanMessage)) {
+        if (/starting search/i.test(cleanMessage)) {
           percent = Math.max(currentProgressPercent, 5);
         } else if (/finding candidate/i.test(cleanMessage)) {
           percent = Math.max(currentProgressPercent, 12);
@@ -1106,7 +1160,7 @@
             );
             badge.addEventListener("mouseleave", hidePopover);
             if (index < terms.length - 1) {
-              badge.insertAdjacentText("beforeend",",\u00A0");
+              badge.insertAdjacentText("beforeend", ",\u00A0");
             }
             container.appendChild(badge);
           });
@@ -1347,7 +1401,8 @@
       }
 
       async function startSearch() {
-        const maxDisplayResultsInput = document.getElementById("maxDisplayResults");
+        const maxDisplayResultsInput =
+          document.getElementById("maxDisplayResults");
         if (!maxDisplayResultsInput) {
           alert("Error: Could not find the 'topK' input element.");
           return;
@@ -1524,15 +1579,12 @@
               data && typeof data.total_candidates === "number"
                 ? data.total_candidates
                 : highConfidenceCount;
-            const corpusText =
-              totalPatentsDisplay || "all patents";
+            const corpusText = totalPatentsDisplay || "all patents";
             searchStatusMessage.textContent = `Found ${resultCount} highly relevant matches from ${corpusText} patents.`;
             downloadButton.classList.remove("hidden");
           } else {
-            searchStatusMessage.textContent =
-              `No results found with a score of ${scoreThreshold} or above.`;
-            resultsContainer.innerHTML =
-              `<div class="empty-state">No results found with a score of ${scoreThreshold} or above.</div>`;
+            searchStatusMessage.textContent = `No results found with a score of ${scoreThreshold} or above.`;
+            resultsContainer.innerHTML = `<div class="empty-state">No results found with a score of ${scoreThreshold} or above.</div>`;
           }
           searchStatusMessage.classList.remove("hidden");
 
