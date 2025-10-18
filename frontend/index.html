@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Patent Assistant</title>
+    <link
+      rel="stylesheet"
+      href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css"
+    />
     <style>
       * {
         margin: 0;
@@ -122,30 +126,8 @@
         margin-bottom: 0.25rem;
       }
 
-      .view-toggle {
-        text-align: right;
-      }
-      .markdown-preview {
-        padding: 2.75rem;
-        background-color: white;
-        border: 1px solid white;
-        border-radius: 0.5rem;
-        font-size: 1rem;
-        font-family: inherit;
-      }
-
-      .markdown-preview p {
-        margin-bottom: 1rem;
-      }
-
-      .markdown-preview p:last-child {
-        margin-bottom: 0;
-      }
-
-      .markdown-preview ul,
-      .markdown-preview ol {
-        margin: 0 0 1rem 1.5rem;
-        padding: 0;
+      #descriptionEditor {
+        margin-top: 0.5rem;
       }
 
       .input-group {
@@ -634,22 +616,13 @@
           </div>
 
           <div class="input-section">
-            <div style="display: flex; justify-content: space-between;">
             <label for="userDescription">Description</label>
-            <div class="view-toggle">
-              <button type="button" id="viewToggleBtn" class="btn-tertiary" style="font-size: 0.75rem;">
-                Show Formatted
-              </button>
-            </div>
-            </div>
+            <div id="descriptionEditor"></div>
             <textarea
               id="userDescription"
+              class="hidden"
               placeholder="Enter description or it will be auto-generated"
             ></textarea>
-            <div
-              id="descriptionPreview"
-              class="markdown-preview hidden"
-            ></div>
           </div>
         </div>
 
@@ -806,8 +779,7 @@
       <div id="relatedTermsContainer" class="related-terms"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.3/dist/purify.min.js"></script>
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 
     <script>
       let eventSource = null;
@@ -846,13 +818,46 @@
         );
       });
 
-      function autoResizeDescription(element) {
-        if (!element) return;
-        element.style.height = "auto";
-        element.style.height = `${element.scrollHeight}px`;
+      const descriptionTextarea = document.getElementById("userDescription");
+      const descriptionEditor = new toastui.Editor({
+        el: document.getElementById("descriptionEditor"),
+        height: "420px",
+        initialEditType: "wysiwyg",
+        previewStyle: "vertical",
+        hideModeSwitch: true,
+        toolbarItems: [
+          ["heading", "bold", "italic", "strike"],
+          ["hr", "quote"],
+          ["ul", "ol", "task", "indent", "outdent"],
+          ["link", "code", "codeblock"],
+        ],
+        initialValue: descriptionTextarea ? descriptionTextarea.value : "",
+      });
+      let isGeneratingDescription = false;
+
+      if (descriptionTextarea) {
+        descriptionTextarea.value = descriptionEditor.getMarkdown();
       }
 
-      autoResizeDescription(document.getElementById("userDescription"));
+      descriptionEditor.on("change", () => {
+        const markdown = descriptionEditor.getMarkdown();
+        if (descriptionTextarea) {
+          descriptionTextarea.value = markdown;
+        }
+        if (isGeneratingDescription) {
+          return;
+        }
+        clearTimeout(extractTimeout);
+        extractTimeout = setTimeout(() => {
+          extractTerms(markdown);
+        }, 2000);
+      });
+
+      descriptionEditor.on("keydown", (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          startSearch();
+        }
+      });
 
       // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
@@ -883,7 +888,6 @@
 
       async function generateDescription() {
         const prompt = document.getElementById("promptInput").value.trim();
-        const textarea = document.getElementById("userDescription");
         const btn = document.getElementById("generateBtn");
 
         if (!prompt) {
@@ -893,8 +897,12 @@
 
         btn.disabled = true;
         btn.textContent = "Generating...";
-        textarea.value = "";
-        autoResizeDescription(textarea);
+        isGeneratingDescription = true;
+        let generatedMarkdown = "";
+        descriptionEditor.setMarkdown("", false);
+        if (descriptionTextarea) {
+          descriptionTextarea.value = "";
+        }
 
         try {
           const response = await fetch("/api/generate-description", {
@@ -909,66 +917,29 @@
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            textarea.value += decoder.decode(value);
-            autoResizeDescription(textarea);
-            textarea.scrollTop = textarea.scrollHeight;
-            if (showingFormatted) {
-              renderMarkdownPreview(textarea.value);
+            generatedMarkdown += decoder.decode(value, { stream: true });
+            descriptionEditor.setMarkdown(generatedMarkdown, false);
+            if (descriptionTextarea) {
+              descriptionTextarea.value = generatedMarkdown;
             }
           }
-
-          if (showingFormatted) {
-            renderMarkdownPreview(textarea.value);
+          generatedMarkdown += decoder.decode();
+          descriptionEditor.setMarkdown(generatedMarkdown, false);
+          if (descriptionTextarea) {
+            descriptionTextarea.value = generatedMarkdown;
           }
-          setView(true);
-          extractTerms(textarea.value);
+
+          isGeneratingDescription = false;
+          extractTerms(generatedMarkdown);
         } catch (err) {
           console.error("Error:", err);
           alert("Failed to generate description");
         } finally {
+          isGeneratingDescription = false;
           btn.disabled = false;
           btn.textContent = "Generate";
         }
       }
-
-      document
-        .getElementById("userDescription")
-        .addEventListener("input", (e) => {
-          autoResizeDescription(e.target);
-          if (showingFormatted) {
-            renderMarkdownPreview(e.target.value);
-          }
-          clearTimeout(extractTimeout);
-          extractTimeout = setTimeout(() => {
-            extractTerms(e.target.value);
-          }, 2000);
-        });
-
-      const viewToggleBtn = document.getElementById("viewToggleBtn");
-      const descriptionTextarea = document.getElementById("userDescription");
-      const descriptionPreview = document.getElementById("descriptionPreview");
-      let showingFormatted = false;
-
-      function renderMarkdownPreview(markdown) {
-        descriptionPreview.innerHTML = DOMPurify.sanitize(
-          marked.parse(markdown || "")
-        );
-      }
-
-      function setView(formatted) {
-        showingFormatted = formatted;
-        descriptionTextarea.classList.toggle("hidden", formatted);
-        descriptionPreview.classList.toggle("hidden", !formatted);
-        viewToggleBtn.textContent = formatted
-          ? "Show Markdown"
-          : "Show Formatted";
-        if (formatted) renderMarkdownPreview(descriptionTextarea.value);
-        if (!formatted) {
-          autoResizeDescription(descriptionTextarea);
-        }
-      }
-
-      viewToggleBtn.addEventListener("click", () => setView(!showingFormatted));
 
       async function extractTerms(text) {
         if (!text || text.trim().length < 20) {
@@ -1506,9 +1477,9 @@
           }
           searchQuery = queryParts.join(" ");
         } else {
-          const description = document
-            .getElementById("userDescription")
-            .value.trim();
+          const description = descriptionEditor
+            .getMarkdown()
+            .trim();
           if (!description) {
             alert("You must generate terms from invention title first.");
             restoreSearchButton(searchButton);
@@ -1715,14 +1686,6 @@
         .addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             generateDescription();
-          }
-        });
-
-      document
-        .getElementById("userDescription")
-        .addEventListener("keydown", (e) => {
-          if (e.key === "Enter" && e.ctrlKey) {
-            startSearch();
           }
         });
 
