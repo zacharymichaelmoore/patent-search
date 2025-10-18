@@ -336,6 +336,26 @@
         cursor: pointer;
         transition: all 0.1s;
         user-select: none;
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .term-badge.term-enter {
+        opacity: 0;
+        transform: translateY(8px);
+        animation: termFadeIn 0.35s ease forwards;
+        animation-delay: var(--term-delay, 0s);
+      }
+
+      @keyframes termFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .term-badge:hover {
@@ -1335,12 +1355,16 @@
         if (terms.length > 0) {
           terms.forEach((term, index) => {
             const badge = document.createElement("span");
-            badge.className = "term-badge";
+            badge.className = "term-badge term-enter";
+            badge.style.setProperty("--term-delay", `${index * 0.08}s`);
             badge.innerHTML = `<span class="term-remove" onclick="removeTerm('${term}')">×</span>${term}`;
             badge.addEventListener("mouseenter", (e) =>
               showHoverPopover(e.currentTarget, term)
             );
             badge.addEventListener("mouseleave", hidePopover);
+            badge.addEventListener("animationend", () =>
+              badge.classList.remove("term-enter")
+            );
             if (index < terms.length - 1) {
               badge.insertAdjacentText("beforeend", ",\u00A0");
             }
