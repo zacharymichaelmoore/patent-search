@@ -303,7 +303,7 @@ async def event_stream(user_description: str, max_display_results: int):
             # Log progress
             if ANALYSIS_PROGRESS_INTERVAL and processed % ANALYSIS_PROGRESS_INTERVAL == 0:
                 yield format_sse("log", {
-                    "message": f"[ANALYZE] Processing patents..."
+                    "message": f"[ANALYZE] Processing patents…"
                 })
 
             analyzed_patents.append(analyzed_patent)
@@ -349,15 +349,15 @@ async def event_stream(user_description: str, max_display_results: int):
 
         top_results = high_confidence_total[:max_display_results]
 
-        # yield format_sse("complete", {
-        #     "message": "Search complete",
-        #     "results": len(top_results),
-        #     "analyzed": processed,
-        #     "high_confidence": len(high_confidence_total),
-        #     "medium_confidence": len(medium_confidence_total),
-        #     "score_threshold": HIGH_SCORE_THRESHOLD,
-        #     "total_candidates": total_candidates
-        # })
+        yield format_sse("complete", {
+            "message": "Search complete",
+            "results": len(top_results),
+            "analyzed": processed,
+            "high_confidence": len(high_confidence_total),
+            "medium_confidence": len(medium_confidence_total),
+            "score_threshold": HIGH_SCORE_THRESHOLD,
+            "total_candidates": total_candidates
+        })
 
     except Exception as e:
         import traceback
