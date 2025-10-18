@@ -847,10 +847,11 @@
         const modeSwitch = defaultUI.querySelector(".toastui-editor-mode-switch");
         const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
         const modeSwitchHeight = modeSwitch ? modeSwitch.offsetHeight : 0;
-        const mode = descriptionEditor.getCurrentMode();
-
         let contentContainer = null;
-        if (mode === "wysiwyg") {
+        const isWysiwyg =
+          defaultUI.classList.contains("toastui-editor-mode-wysiwyg");
+
+        if (isWysiwyg) {
           contentContainer = defaultUI.querySelector(
             ".toastui-editor-ww-container"
           );
@@ -862,7 +863,7 @@
         if (!contentContainer) return;
 
         let contentHeight = contentContainer.scrollHeight;
-        if (mode === "wysiwyg") {
+        if (isWysiwyg) {
           const wysiwygBody = contentContainer.querySelector(
             ".toastui-editor-contents"
           );
