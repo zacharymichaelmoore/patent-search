@@ -268,7 +268,7 @@ async def event_stream(user_description: str, max_display_results: int):
 
         total_candidates = len(patents)
         yield format_sse("log", {
-            "message": f"[SEARCH] Found {total_candidates} candidates, starting analysis..."
+            "message": f"[SEARCH] Found candidates, starting analysis..."
         })
 
         client = await get_httpx_client()

@@ -267,7 +267,6 @@
       }
 
       .term-badge:hover {
-        transform: scale(1.05);
         padding-left: 1.75rem;
       }
 
@@ -348,7 +347,6 @@
       .related-badge:hover {
         background: #f0f9ff;
         border-color: #3b82f6;
-        transform: scale(1.05);
       }
 
       .related-badge::before {
@@ -1108,7 +1106,7 @@
             );
             badge.addEventListener("mouseleave", hidePopover);
             if (index < terms.length - 1) {
-              badge.insertAdjacentText("beforeend", ", ");
+              badge.insertAdjacentText("beforeend","\u00A0");
             }
             container.appendChild(badge);
           });
@@ -1528,7 +1526,7 @@
                 : highConfidenceCount;
             const corpusText =
               totalPatentsDisplay || "all patents";
-            searchStatusMessage.textContent = `Showing ${resultCount} highly relevant matches from ${corpusText}.`;
+            searchStatusMessage.textContent = `Showing ${resultCount} highly relevant matches from ${corpusText} patents.`;
             downloadButton.classList.remove("hidden");
           } else {
             searchStatusMessage.textContent =
