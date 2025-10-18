@@ -950,6 +950,9 @@
           ? "Show Markdown"
           : "Show Formatted";
         if (formatted) renderMarkdownPreview(descriptionTextarea.value);
+        if (!formatted) {
+          autoResizeDescription(descriptionTextarea);
+        }
       }
 
       viewToggleBtn.addEventListener("click", () => setView(!showingFormatted));
