@@ -863,6 +863,11 @@
     <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 
     <script>
+      const API_BASE =
+        window.location.hostname === "localhost" &&
+        (window.location.port === "8080" || window.location.port === "3000")
+          ? "http://localhost:8000"
+          : "";
       let eventSource = null;
       let extractTimeout = null;
       let currentTerms = {
@@ -1060,7 +1065,7 @@
 
       async function fetchTotalPatents() {
         try {
-          const res = await fetch("/api/stats");
+          const res = await fetch(`${API_BASE}/api/stats`);
           if (!res.ok) throw new Error(`Status ${res.status}`);
           const data = await res.json();
           const total = data?.totalPatents;
@@ -1099,7 +1104,7 @@
         adjustEditorHeight();
 
         try {
-          const response = await fetch("/api/generate-description", {
+          const response = await fetch(`${API_BASE}/api/generate-description`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt }),
@@ -1153,7 +1158,7 @@
           .classList.remove("hidden");
 
         try {
-          const response = await fetch("/api/extract-terms", {
+          const response = await fetch(`${API_BASE}/api/extract-terms`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ documentText: text }),
@@ -1184,7 +1189,7 @@
         if (termsToFetch.length === 0) return;
 
         try {
-          const response = await fetch("/api/get-related-terms", {
+          const response = await fetch(`${API_BASE}/api/get-related-terms`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ terms: termsToFetch }),
@@ -1508,7 +1513,7 @@
       async function fetchRelatedForSingleTerm(term) {
         if (relatedTermsCache[term]) return;
         try {
-          const response = await fetch("/api/get-related-terms", {
+          const response = await fetch(`${API_BASE}/api/get-related-terms`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ terms: [term] }),
@@ -1720,7 +1725,8 @@
           maxDisplayResults: String(maxDisplayResults),
         });
 
-        eventSource = new EventSource(`/api/search?${params.toString()}`);
+        const searchUrl = `${API_BASE}/api/search?${params.toString()}`;
+        eventSource = new EventSource(searchUrl);
 
         eventSource.addEventListener("log", (event) => {
           try {
@@ -1880,7 +1886,7 @@
         return true;
       }
       function downloadCSV() {
-        const url = `/export_csv?userDescription=${encodeURIComponent(
+        const url = `${API_BASE}/export_csv?userDescription=${encodeURIComponent(
           lastSearchQuery
         )}&topK=${lastTopK}`;
         window.open(url, "_blank");

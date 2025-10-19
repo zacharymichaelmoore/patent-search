@@ -18,7 +18,9 @@ services:
       - /usr/share/ollama:/root/.ollama
 
   patent-app:
-    build: ./api
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -29,10 +31,10 @@ services:
       - QDRANT_FETCH_COUNT=100
       - HIGH_SCORE_THRESHOLD=60
     volumes:
-      - ./api:/app        # Mount live code for hot-reload
+      - ./api:/app/api        # Mount live code for hot-reload
       - ./frontend:/app/frontend  # Optional: if index.html lives here
     command: >
-      uvicorn main:app
+      uvicorn api.main:app
       --host 0.0.0.0
       --port 8000
       --reload

@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Query
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from api.routes import extract_terms, generate_description, related_terms
@@ -38,6 +39,18 @@ def _safe_float_env(var_name: str, default: float) -> float:
 
 # ---- GLOBAL CONFIG ----
 app = FastAPI(title="Patent Search App")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(extract_terms.router)
 app.include_router(generate_description.router)
 app.include_router(related_terms.router)
