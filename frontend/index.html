@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Find Patents/title>
+    <title>Find Patents</title>
     <link
       rel="stylesheet"
       href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css"
@@ -751,7 +751,7 @@
       <div class="initial-center" id="initialPromptWrapper">
         <div class="card">
           <div class="landing-header-text" id="landingHeaderText">
-            <h1>Fast Relevant Patents</h1>
+            <h1>Find relevant patents</h1>
             <p class="subtitle">
               Securely and instantly find patents and conduct Prior Art
               research.
@@ -889,7 +889,7 @@
               class="btn-primary btn-large hidden"
               onclick="startSearch()"
               id="searchButton"
-              style="margin-top: 1rem; align-self: end; width: 95px"
+              style="margin-top: 1.5rem; align-self: start; width: 95px"
             >
               Search
             </button>
@@ -904,14 +904,23 @@
               class="hidden"
               style="
                 text-align: center;
-                margin-top: 0.75rem;
+                margin-top: 2rem;
                 color: black;
                 font-size: 0.875rem;
-                padding: 1rem;
+                padding: .5rem;
                 background-color: white;
-                border-radius: 0.5rem;
+                border-radius: 0.25rem;
               "
             ></p>
+            <button
+              id="showResultsButton"
+              class="btn-primary btn-large hidden"
+              type="button"
+              style="margin-top: 1rem; color: black; background-color: #e5e5e5;"
+              onclick="showResultsView()"
+            >
+              Show results
+            </button>
           </div>
 
           <!-- Premium Upgrade Card -->
@@ -1039,6 +1048,18 @@
         device: new Map(),
         subject: new Map(),
       };
+      const resultsContainerEl = document.getElementById("resultsContainer");
+      const downloadButtonEl = document.getElementById("downloadButton");
+      const showResultsButton = document.getElementById("showResultsButton");
+      const showResultsButtonHome = showResultsButton
+        ? showResultsButton.parentElement
+        : null;
+      if (downloadButtonEl) {
+        downloadButtonEl.dataset.available = "false";
+      }
+      if (showResultsButton) {
+        showResultsButton.dataset.available = "false";
+      }
 
       Object.entries(addTermButtons).forEach(([category, button]) => {
         if (!button) return;
@@ -1803,6 +1824,55 @@
           .trim();
       }
 
+      function resetResultsView() {
+        if (showResultsButton) {
+          showResultsButton.disabled = false;
+          showResultsButton.textContent = "Show results";
+          showResultsButton.dataset.available = "false";
+          showResultsButton.classList.add("hidden");
+          if (
+            showResultsButtonHome &&
+            showResultsButton.parentElement !== showResultsButtonHome
+          ) {
+            showResultsButtonHome.appendChild(showResultsButton);
+          }
+        }
+        if (downloadButtonEl) {
+          downloadButtonEl.classList.add("hidden");
+          downloadButtonEl.dataset.available = "false";
+        }
+        if (resultsContainerEl) {
+          resultsContainerEl.classList.add("hidden");
+          resultsContainerEl.innerHTML = "";
+        }
+        if (mainContent) {
+          mainContent.classList.remove("hidden");
+        }
+      }
+
+      function showResultsView() {
+        if (!showResultsButton) return;
+
+        if (mainContent) {
+          mainContent.classList.add("hidden");
+        }
+        if (resultsContainerEl) {
+          resultsContainerEl.classList.remove("hidden");
+          resultsContainerEl.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+        if (downloadButtonEl) {
+          if (downloadButtonEl.dataset.available === "true") {
+            downloadButtonEl.classList.remove("hidden");
+          } else {
+            downloadButtonEl.classList.add("hidden");
+          }
+        }
+        showResultsButton.classList.add("hidden");
+      }
+
       function restoreSearchButton(button, options = {}) {
         if (!button) return;
         const { hideAfterRestore = false } = options;
@@ -1827,9 +1897,9 @@
         }
         const maxDisplayResults = parseInt(maxDisplayResultsInput.value, 10);
 
-        const resultsContainer = document.getElementById("resultsContainer");
+        const resultsContainer = resultsContainerEl;
         const searchButton = document.getElementById("searchButton");
-        const downloadButton = document.getElementById("downloadButton");
+        const downloadButton = downloadButtonEl;
         const searchStatusMessage = document.getElementById(
           "searchStatusMessage"
         );
@@ -1838,7 +1908,8 @@
           !resultsContainer ||
           !searchButton ||
           !downloadButton ||
-          !searchStatusMessage
+          !searchStatusMessage ||
+          !showResultsButton
         ) {
           console.error("Missing required elements");
           alert(
@@ -1911,12 +1982,12 @@
           return;
         }
 
+        resetResultsView();
+
         console.log("Final Search Query:", searchQuery);
         lastSearchQuery = searchQuery;
         lastTopK = maxDisplayResults;
 
-        downloadButton.classList.add("hidden");
-        resultsContainer.classList.remove("hidden");
         resultsContainer.innerHTML =
           '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
         resetSearchProgress();
@@ -1984,7 +2055,8 @@
 
           restoreSearchButton(searchButton, { hideAfterRestore: true });
 
-          if (resultCount > 0) {
+          const hasResults = resultCount > 0;
+          if (hasResults) {
             if (data && typeof data.score_threshold === "number") {
               scoreThreshold = data.score_threshold;
             }
@@ -1998,10 +2070,27 @@
                 : highConfidenceCount;
             const corpusText = totalPatentsDisplay || "all patents";
             searchStatusMessage.textContent = `Found ${resultCount} highly relevant matches from ${corpusText} patents.`;
-            downloadButton.classList.remove("hidden");
           } else {
-            searchStatusMessage.textContent = `No results found with a score of ${scoreThreshold} or above.`;
+            searchStatusMessage.textContent = `No results found with a score of ${scoreThreshold} or above. Select "Show results" to review the summary.`;
             resultsContainer.innerHTML = `<div class="empty-state">No results found with a score of ${scoreThreshold} or above.</div>`;
+          }
+          if (downloadButton) {
+            downloadButton.dataset.available = hasResults ? "true" : "false";
+            downloadButton.classList.add("hidden");
+          }
+          if (resultsContainer) {
+            resultsContainer.classList.add("hidden");
+          }
+          if (showResultsButton) {
+            showResultsButton.dataset.available = "true";
+            showResultsButton.textContent = "Show results";
+            if (
+              showResultsButtonHome &&
+              showResultsButton.parentElement !== showResultsButtonHome
+            ) {
+              showResultsButtonHome.appendChild(showResultsButton);
+            }
+            showResultsButton.classList.remove("hidden");
           }
           searchStatusMessage.classList.remove("hidden");
 
@@ -2018,7 +2107,23 @@
           restoreSearchButton(searchButton);
           resultsContainer.innerHTML =
             '<div class="empty-state">An error occurred during the search. Please check the console.</div>';
-          searchStatusMessage.textContent = "Search failed. Please try again.";
+          resultsContainer.classList.add("hidden");
+          if (downloadButton) {
+            downloadButton.dataset.available = "false";
+            downloadButton.classList.add("hidden");
+          }
+          if (showResultsButton) {
+            showResultsButton.dataset.available = "true";
+            showResultsButton.textContent = "Show results";
+            if (
+              showResultsButtonHome &&
+              showResultsButton.parentElement !== showResultsButtonHome
+            ) {
+              showResultsButtonHome.appendChild(showResultsButton);
+            }
+            showResultsButton.classList.remove("hidden");
+          }
+          searchStatusMessage.textContent = 'Search failed. Select "Show results" to review the error and try again.';
           searchStatusMessage.classList.remove("hidden");
           if (eventSource) {
             eventSource.close();
