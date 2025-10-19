@@ -14,6 +14,7 @@ import json
 import os
 import re
 import httpx
+import logging
 from typing import Optional, Dict, Any
 from collections import deque
 
@@ -74,6 +75,7 @@ VECTOR_LOG_PATH = os.getenv(
 
 _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
+logger = logging.getLogger(__name__)
 HTTPX_LIMITS = httpx.Limits(
     max_connections=max(OLLAMA_CONCURRENCY * 8, 1),
     max_keepalive_connections=max(OLLAMA_CONCURRENCY, 1),
@@ -112,6 +114,22 @@ def read_total_patents_from_log() -> Optional[int]:
         return int(total_str)
     except (OSError, ValueError):
         return None
+
+
+def read_total_patents_from_qdrant() -> Optional[int]:
+    try:
+        count_result = _qdrant.count(collection_name=QDRANT_COLLECTION, exact=True)
+        count_value = getattr(count_result, "count", None)
+        if isinstance(count_value, (int, float)):
+            return int(count_value)
+        # Some Qdrant versions expose points_count only via get_collection
+        collection_info = _qdrant.get_collection(collection_name=QDRANT_COLLECTION)
+        fallback_value = getattr(collection_info, "points_count", None)
+        if isinstance(fallback_value, (int, float)):
+            return int(fallback_value)
+    except Exception as exc:
+        logger.warning("Failed to fetch total patent count from Qdrant: %s", exc)
+    return None
 
 
 def embed_text_sync(text: str):
@@ -431,5 +449,9 @@ def health():
 
 @app.get("/api/stats")
 def stats():
-    total = read_total_patents_from_log()
-    return {"totalPatents": total}
+    total_source = "qdrant"
+    total = read_total_patents_from_qdrant()
+    if total is None:
+        total_source = "log"
+        total = read_total_patents_from_log()
+    return {"totalPatents": total, "totalSource": total_source}
