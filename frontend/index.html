@@ -419,7 +419,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #6b7280;
+        color: black;
         font-weight: bold;
         opacity: 0;
         transition: opacity 0.1s;
@@ -459,7 +459,7 @@
 
       .popover-subtitle {
         font-size: 0.75rem;
-        color: #6b7280;
+        color: black;
         margin-bottom: 0.75rem;
       }
 
@@ -618,7 +618,7 @@
 
       .result-abstract {
         font-size: 1rem;
-        color: #6b7280;
+        color: black;
         margin-bottom: 0.5rem;
       }
 
@@ -642,7 +642,7 @@
       .loading {
         text-align: center;
         padding: 2rem;
-        color: #6b7280;
+        color: black;
       }
 
       .spinner {
@@ -889,7 +889,7 @@
               class="btn-primary btn-large hidden"
               onclick="startSearch()"
               id="searchButton"
-              style="margin-top: 1rem; align-self: end; width: 95px;"
+              style="margin-top: 1rem; align-self: end; width: 95px"
             >
               Search
             </button>
@@ -905,8 +905,11 @@
               style="
                 text-align: center;
                 margin-top: 0.75rem;
-                color: #6b7280;
+                color: black;
                 font-size: 0.875rem;
+                padding: 1rem;
+                background-color: white;
+                border-radius: 0.5rem;
               "
             ></p>
           </div>
@@ -961,7 +964,7 @@
 
       <div id="popoverAddSection" class="hidden">
         <div class="popover-title">Add New Term</div>
-        <div class="input-group" style="box-shadow: none;">
+        <div class="input-group" style="box-shadow: none">
           <input
             type="text"
             id="addTermInput"
@@ -1013,6 +1016,12 @@
         device: document.getElementById("addDeviceTermButton"),
         subject: document.getElementById("addSubjectTermButton"),
       };
+      function hideTermAddButtons() {
+        Object.values(addTermButtons).forEach((button) => {
+          if (!button) return;
+          button.classList.add("hidden");
+        });
+      }
       const MIN_EDITOR_HEIGHT = 320;
       const descriptionSection = document.getElementById("descriptionSection");
       const postGenerateColumn = document.getElementById("postGenerateColumn");
@@ -1794,14 +1803,19 @@
           .trim();
       }
 
-      function restoreSearchButton(button) {
+      function restoreSearchButton(button, options = {}) {
         if (!button) return;
+        const { hideAfterRestore = false } = options;
         button.disabled = false;
         button.innerHTML = "Search";
         button.style.display = "";
         button.style.alignItems = "";
         button.style.justifyContent = "";
         button.style.gap = "";
+        if (hideAfterRestore) {
+          button.classList.add("hidden");
+          hideTermAddButtons();
+        }
       }
 
       async function startSearch() {
@@ -1844,10 +1858,10 @@
 
         // 2. Update button to show spinner and new text
         searchButton.disabled = true;
-  //       searchButton.innerHTML = `
-  //   <div class="spinner-small"></div>
-  //   <span>Loading...</span>
-  // `;
+        //       searchButton.innerHTML = `
+        //   <div class="spinner-small"></div>
+        //   <span>Loading...</span>
+        // `;
         // Add flex styles to center the content
         // searchButton.style.display = "flex";
         // searchButton.style.alignItems = "center";
@@ -1968,7 +1982,7 @@
             hideSearchProgress();
           }
 
-          restoreSearchButton(searchButton);
+          restoreSearchButton(searchButton, { hideAfterRestore: true });
 
           if (resultCount > 0) {
             if (data && typeof data.score_threshold === "number") {
