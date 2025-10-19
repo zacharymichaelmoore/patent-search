@@ -29,14 +29,25 @@
         visibility: hidden;
         pointer-events: none;
         transform: translateY(-20px);
-        transition: opacity 0.4s ease, transform 0.4s ease;
+        transition: opacity 0.4s ease-in, transform 0.4s ease;
       }
+
       header.content-visible {
         display: block;
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
         transform: translateY(0);
+      }
+
+      .toastui-editor-defaultUI {
+        border-color: transparent;
+      }
+
+      .toastui-editor-defaultUI-toolbar {
+        background-color: transparent;
+        border: none;
+        border-radius: 0px;
       }
 
       .header-content {
@@ -726,7 +737,7 @@
           <h2 class="card-title">Description</h2>
 
           <div class="input-section hidden" id="descriptionSection">
-            <label for="userDescription">Description</label>
+            <!-- <label for="userDescription">Description</label> -->
             <div id="descriptionEditor"></div>
             <textarea
               id="userDescription"
@@ -1040,7 +1051,10 @@
         hasUnlockedInterface = true;
 
         if (header) {
-          header.classList.add("content-visible");
+          header.style.display = "block";
+          requestAnimationFrame(() => {
+            header.classList.add("content-visible");
+          });
         }
         if (main) {
           main.classList.add("app-visible");
@@ -1081,7 +1095,10 @@
           if (descriptionSection) {
             descriptionSection.classList.remove("hidden");
             descriptionSection.classList.add("fade-in");
-            setTimeout(() => descriptionSection.classList.remove("fade-in"), 500);
+            setTimeout(
+              () => descriptionSection.classList.remove("fade-in"),
+              500
+            );
           }
 
           if (postGenerateColumn) {
