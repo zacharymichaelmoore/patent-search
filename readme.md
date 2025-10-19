@@ -109,3 +109,45 @@ as opposed to the `docker-compose.dev.yml` which is for local development.
 | **POST** | `/api/generate-description` | Generates invention descriptions |
 | **GET** | `/health` | Health check endpoint |
 | **GET** | `/export_csv` | Exports search results to CSV |
+
+---
+
+## Local Development
+
+### Run the backend on the VM, edit the frontend locally
+
+1. **Ensure services are running on the VM**  
+   ```bash
+   ssh zacharymoore@34.182.86.63
+   cd ~/patent-search
+   docker compose up -d
+   ```
+
+2. **Open an SSH tunnel from your laptop**  
+   ```bash
+   ssh -i ~/.ssh/google_compute_engine \
+       -L 8000:localhost:8091 \
+       zacharymoore@34.182.86.63
+   ```
+   Leave this session open. It forwards `localhost:8000` on your laptop to the FastAPI service running on the VM.
+
+3. **Serve the frontend locally**  
+   ```bash
+   cd /Users/zacharymoore/Documents/GitHub/patent-search/frontend
+   python3 -m http.server 8080
+   ```
+
+4. **Develop the UI**  
+   - Visit `http://localhost:8080` in your browser. The page is served from your local `frontend/index.html`.  
+   - All API calls are proxied to `http://localhost:8000` (through the SSH tunnel), so heavy compute still runs on the VM.  
+   - Save edits to `index.html` and refresh the browser (⌘⇧R) to see changes instantly.
+
+5. **Testing**  
+   - `http://localhost:8000/health` confirms the backend is reachable.  
+   - `curl http://localhost:8080/index.html | head` shows the exact HTML being served locally.
+
+6. **Cleanup**  
+   - Stop the static server with `Ctrl+C`.  
+   - Close the tunnel by exiting the SSH session (`Ctrl+C`).
+
+> Tip: if you need automatic refresh, swap `python3 -m http.server` with a watcher such as `live-server` or Vite.

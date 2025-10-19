@@ -24,11 +24,18 @@
 
       header {
         padding: 2rem 5.5rem;
+        display: none;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
         transform: translateY(-20px);
         transition: opacity 0.4s ease, transform 0.4s ease;
       }
-
       header.content-visible {
+        display: block;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
         transform: translateY(0);
       }
 
@@ -114,7 +121,7 @@
       }
 
       .fade-in {
-        animation: fadeInUp 0.45s ease forwards;
+        animation: fadeInUp 0.5s ease forwards;
       }
 
       @keyframes fadeInUp {
@@ -176,6 +183,23 @@
 
       #descriptionEditor {
         margin-top: 0.5rem;
+      }
+
+      .landing-header-text {
+        text-align: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .landing-header-text h1 {
+        font-size: 2.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .landing-header-text .subtitle {
+        font-size: 1rem;
+        color: gray;
+        font-style: italic;
       }
 
       #promptSection {
@@ -669,9 +693,14 @@
     <main>
       <div class="initial-center" id="initialPromptWrapper">
         <div class="card">
-          <h2 class="card-title" style="text-align: center">Description</h2>
+          <div class="landing-header-text" id="landingHeaderText">
+            <h1>Prior Art Research Tool</h1>
+            <p class="subtitle">
+              Secure and Instant Research for Patent Applications
+            </p>
+          </div>
           <div id="promptSection">
-            <label for="promptInput">Title</label>
+            <label for="promptInput" id="titleLabel" class="hidden">Title</label>
             <div class="input-group">
               <input
                 type="text"
@@ -715,7 +744,7 @@
               <span style="cursor: default">Related Terms</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
-                <span>Analyzing...</span>
+                <span>extracting key terms...</span>
               </span>
             </h2>
 
@@ -899,15 +928,21 @@
       const MIN_EDITOR_HEIGHT = 320;
       const descriptionSection = document.getElementById("descriptionSection");
       const postGenerateColumn = document.getElementById("postGenerateColumn");
+      const landingHeaderText = document.getElementById("landingHeaderText");
       const initialPromptWrapper = document.getElementById(
         "initialPromptWrapper"
       );
       const descriptionCard = document.getElementById("descriptionCard");
       const promptSection = document.getElementById("promptSection");
+      const titleLabel = document.getElementById("titleLabel");
       const mainContent = document.getElementById("mainContent");
       const header = document.querySelector("header");
       const main = document.querySelector("main");
       let hasUnlockedInterface = false;
+      const renderedTermNodes = {
+        device: new Map(),
+        subject: new Map(),
+      };
 
       Object.entries(addTermButtons).forEach(([category, button]) => {
         if (!button) return;
@@ -1020,6 +1055,9 @@
             promptSection.classList.add("prompt-inline");
             promptSection.classList.add("fade-in");
             setTimeout(() => promptSection.classList.remove("fade-in"), 500);
+            if (titleLabel) {
+              titleLabel.classList.remove("hidden");
+            }
           }
 
           if (mainContent) {
@@ -1029,6 +1067,9 @@
           }
 
           if (initialPromptWrapper && initialPromptWrapper.parentNode) {
+            if (landingHeaderText && landingHeaderText.parentNode) {
+              landingHeaderText.parentNode.removeChild(landingHeaderText);
+            }
             initialPromptWrapper.parentNode.removeChild(initialPromptWrapper);
           }
 
@@ -1128,7 +1169,6 @@
           if (descriptionTextarea) {
             descriptionTextarea.value = generatedMarkdown;
           }
-          adjustEditorHeight();
 
           isGeneratingDescription = false;
           extractTerms(generatedMarkdown);
@@ -1338,12 +1378,16 @@
           searchButton.classList.toggle("hidden", !hasTerms);
         }
 
-        const combinedTerms = [
-          ...currentTerms.deviceTerms,
-          ...currentTerms.technologyTerms,
-        ];
-        renderTerms("deviceTechTerms", combinedTerms, "device");
-        renderTerms("subjectTerms", currentTerms.subjectTerms, "subject");
+        const combinedTerms = [...currentTerms.deviceTerms, ...currentTerms.technologyTerms];
+        const sortedDeviceTerms = combinedTerms.slice().sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" })
+        );
+        const sortedSubjectTerms = currentTerms.subjectTerms
+          .slice()
+          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+        renderTerms("deviceTechTerms", sortedDeviceTerms, "device");
+        renderTerms("subjectTerms", sortedSubjectTerms, "subject");
 
         document
           .getElementById("andOperator")
@@ -1353,32 +1397,74 @@
           );
       }
 
+      function createTermBadge(term) {
+        const badge = document.createElement("span");
+        badge.className = "term-badge term-enter";
+        badge.dataset.term = term;
+
+        const removeButton = document.createElement("span");
+        removeButton.className = "term-remove";
+        removeButton.textContent = "×";
+        removeButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          removeTerm(term);
+        });
+
+        badge.appendChild(removeButton);
+        badge.appendChild(document.createTextNode(term));
+
+        badge.addEventListener("mouseenter", (e) =>
+          showHoverPopover(e.currentTarget, term)
+        );
+        badge.addEventListener("mouseleave", hidePopover);
+        badge.addEventListener("animationend", () =>
+          badge.classList.remove("term-enter")
+        );
+
+        return badge;
+      }
+
       function renderTerms(containerId, terms, category) {
         const container = document.getElementById(containerId);
-        container.innerHTML = "";
+        if (!container) return;
+        const registry =
+          renderedTermNodes[category] ||
+          (renderedTermNodes[category] = new Map());
 
-        if (terms.length > 0) {
-          terms.forEach((term, index) => {
-            const badge = document.createElement("span");
-            badge.className = "term-badge term-enter";
-            badge.style.setProperty("--term-delay", `${index * 0.08}s`);
-            badge.innerHTML = `<span class="term-remove" onclick="removeTerm('${term}')">×</span>${term}`;
-            badge.addEventListener("mouseenter", (e) =>
-              showHoverPopover(e.currentTarget, term)
-            );
-            badge.addEventListener("mouseleave", hidePopover);
-            badge.addEventListener("animationend", () =>
-              badge.classList.remove("term-enter")
-            );
-            if (index < terms.length - 1) {
-              badge.insertAdjacentText("beforeend", ",\u00A0");
-            }
-            container.appendChild(badge);
-          });
-        } else {
-          container.innerHTML =
-            '<span style="color: #9ca3af; font-size: 1rem;">No terms</span>';
+        if (!Array.isArray(terms) || terms.length === 0) {
+          container.textContent = "";
+          registry.clear();
+          return;
         }
+
+        const seen = new Set();
+        const fragment = document.createDocumentFragment();
+
+        terms.forEach((term, index) => {
+          let badge = registry.get(term);
+          if (!badge) {
+            badge = createTermBadge(term);
+            registry.set(term, badge);
+            badge.style.setProperty("--term-delay", `${index * 0.08}s`);
+          } else {
+            badge.classList.remove("term-enter");
+            badge.style.removeProperty("--term-delay");
+          }
+          seen.add(term);
+          fragment.appendChild(badge);
+          if (index < terms.length - 1) {
+            fragment.appendChild(document.createTextNode(",\u00A0"));
+          }
+        });
+
+        Array.from(registry.keys()).forEach((term) => {
+          if (!seen.has(term)) {
+            registry.delete(term);
+          }
+        });
+
+        container.textContent = "";
+        container.appendChild(fragment);
 
         const addButton = addTermButtons[category];
         if (addButton) {
