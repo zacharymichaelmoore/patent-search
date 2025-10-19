@@ -286,17 +286,11 @@
       }
 
       .btn-primary {
-        color: black;
-        background-color: none;
-        border-radius: 0.5rem;
-        border: 1px solid gainsboro;
+        color: white;
+        background-color: #242424;
         font-family: serif;
-      }
-
-      .btn-primary:hover:not(:disabled) {
-        background: gainsboro !important;
-        transition: all 0.1s;
-        border: 1px solid gainsboro;
+        width: 90px;
+        border-radius: 16px;
       }
 
       .btn-primary:disabled {
@@ -340,16 +334,17 @@
         font-size: 1rem;
       }
 
-      .btn-large:hover:not(:disabled) {
+      /* .btn-large:hover:not(:disabled) {
         background: coral !important;
         color: white;
         border: 1px solid white;
         transition: all 0.2s;
         font-family: serif;
-      }
+      } */
 
       .query-section {
         background: transparent;
+        margin-top: 1rem;
       }
 
       .query-label {
@@ -367,6 +362,7 @@
         flex-direction: column;
         gap: 0.5rem;
         align-items: flex-start;
+        max-width: 380px;
       }
 
       .terms-container {
@@ -548,7 +544,7 @@
 
       .progress-track-generating {
         height: 0.2rem;
-        background: rgb(237, 237, 237)
+        background: rgb(237, 237, 237);
       }
 
       .progress-bar-generating {
@@ -757,7 +753,8 @@
           <div class="landing-header-text" id="landingHeaderText">
             <h1>Fast Relevant Patents</h1>
             <p class="subtitle">
-              Securely and instantly find patents and conduct Prior Art research.
+              Securely and instantly find patents and conduct Prior Art
+              research.
             </p>
           </div>
           <div id="promptSection">
@@ -827,10 +824,14 @@
         <!-- Right Column -->
         <div id="postGenerateColumn" style="padding-left: 2rem" class="hidden">
           <!-- Query Builder -->
-          <div class="card">
+          <div class="card" style="display: flex; flex-direction: column">
             <h2 class="card-title">
               <span style="cursor: default">Related Terms</span>
-              <span id="extractingIndicator" class="loading-indicator hidden">
+              <span
+                id="extractingIndicator"
+                class="loading-indicator hidden"
+                style="padding-right: 1rem"
+              >
                 <div class="spinner-small"></div>
                 <span style="font-weight: 500; color: black"
                   >extracting key terms</span
@@ -843,10 +844,7 @@
                 <p style="cursor: default">Keywords will be generated here</p>
               </div>
 
-              <div
-                id="queryPreview"
-                class="hidden"
-              >
+              <div id="queryPreview" class="hidden">
                 <div class="query-section">
                   <div class="query-label">Devices / Technologies</div>
                   <div class="terms-section">
@@ -859,10 +857,11 @@
                     </button>
                   </div>
                 </div>
-
-                <div id="andOperator" class="operator-and hidden">AND</div>
-
-                <div class="query-section" id="subjectSection">
+                <div
+                  class="query-section"
+                  id="subjectSection"
+                  style="margin-top: 2rem"
+                >
                   <div class="query-label">Subjects</div>
                   <div class="terms-section">
                     <div class="terms-container" id="subjectTerms"></div>
@@ -890,7 +889,7 @@
               class="btn-primary btn-large hidden"
               onclick="startSearch()"
               id="searchButton"
-              style="margin-top: 1rem"
+              style="margin-top: 1rem; align-self: end; width: 95px;"
             >
               Search
             </button>
@@ -962,12 +961,12 @@
 
       <div id="popoverAddSection" class="hidden">
         <div class="popover-title">Add New Term</div>
-        <div class="input-group">
+        <div class="input-group" style="box-shadow: none;">
           <input
             type="text"
             id="addTermInput"
             placeholder="Type a term..."
-            style="padding: 0.5rem"
+            style="padding: 0.5rem; border-radius: 0px"
           />
         </div>
         <div class="popover-subtitle" style="margin-top: 0.5rem">
@@ -1845,15 +1844,15 @@
 
         // 2. Update button to show spinner and new text
         searchButton.disabled = true;
-        searchButton.innerHTML = `
-    <div class="spinner-small"></div>
-    <span>Loading...</span>
-  `;
+  //       searchButton.innerHTML = `
+  //   <div class="spinner-small"></div>
+  //   <span>Loading...</span>
+  // `;
         // Add flex styles to center the content
-        searchButton.style.display = "flex";
-        searchButton.style.alignItems = "center";
-        searchButton.style.justifyContent = "center";
-        searchButton.style.gap = "0.5rem";
+        // searchButton.style.display = "flex";
+        // searchButton.style.alignItems = "center";
+        // searchButton.style.justifyContent = "center";
+        // searchButton.style.gap = "0.5rem";
 
         let searchQuery = "";
         const { deviceTerms, technologyTerms, subjectTerms } = currentTerms;
