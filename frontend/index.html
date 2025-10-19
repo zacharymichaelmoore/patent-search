@@ -202,13 +202,12 @@
 
       .landing-header-text {
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem;
       }
 
       .landing-header-text h1 {
         font-size: 2.75rem;
         font-weight: 700;
-        margin-bottom: 0.5rem;
       }
 
       .landing-header-text .subtitle {
@@ -228,6 +227,11 @@
       .input-group {
         display: flex;
         gap: 0.5rem;
+      }
+      .input-group[data-landing-style="true"] {
+        border-radius: 2rem;
+        background-color: #ffffff;
+        height: 10rem;
       }
 
       input[type="text"],
@@ -304,7 +308,7 @@
         background: #f9fafb;
       }
 
-       .btn-tertiary {
+      .btn-tertiary {
         color: black;
         background: none;
         border: none;
@@ -551,14 +555,9 @@
         content: "";
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-          98deg,
-          white,
-          lightgray,
-          white
-        );
+        background: linear-gradient(98deg, white, lightgray, white);
         transform: translateX(-100%);
-        animation: progress-bar-generating 1.0s ease-in-out infinite;
+        animation: progress-bar-generating 1s ease-in-out infinite;
       }
       @keyframes progress-bar-generating {
         0% {
@@ -751,16 +750,26 @@
             </p>
           </div>
           <div id="promptSection">
-            <label for="promptInput" id="titleLabel" class="hidden">Title</label>
-            <div class="input-group">
+            <label for="promptInput" id="titleLabel" class="hidden"
+              >Title</label
+            >
+            <div class="input-group" data-landing-style="true">
               <input
                 type="text"
                 id="promptInput"
                 placeholder="Enter invention title"
+                style="height: fit-content; border: none"
               />
               <button
                 class="btn-primary"
-                style="width: -webkit-fill-available; max-width: fit-content"
+                style="
+                  place-self: flex-end;
+                  height: 44px;
+                  margin-right: 1rem;
+                  margin-bottom: 1rem;
+                  width: -webkit-fill-available;
+                  max-width: fit-content;
+                "
                 onclick="generateDescription()"
                 id="generateBtn"
               >
@@ -778,7 +787,11 @@
 
           <div class="input-section hidden" id="descriptionSection">
             <!-- <label for="userDescription">Description</label> -->
-            <div class="progress-container hidden" id="generatingIndicator" aria-hidden="true">
+            <div
+              class="progress-container hidden"
+              id="generatingIndicator"
+              aria-hidden="true"
+            >
               <div class="progress-track progress-track-generating">
                 <div class="progress-bar progress-bar-generating"></div>
               </div>
@@ -801,7 +814,9 @@
               <span style="cursor: default">Related Terms</span>
               <span id="extractingIndicator" class="loading-indicator hidden">
                 <div class="spinner-small"></div>
-                <span style="font-weight: 500; color: darkgray;">extracting key terms...</span>
+                <span style="font-weight: 500; color: darkgray"
+                  >extracting key terms...</span
+                >
               </span>
             </h2>
 
@@ -991,6 +1006,9 @@
       );
       const descriptionCard = document.getElementById("descriptionCard");
       const promptSection = document.getElementById("promptSection");
+      const landingInputGroup = document.querySelector(
+        "[data-landing-style=\"true\"]"
+      );
       const titleLabel = document.getElementById("titleLabel");
       const mainContent = document.getElementById("mainContent");
       const header = document.querySelector("header");
@@ -1033,8 +1051,9 @@
         adjustHeightFrame = requestAnimationFrame(() => {
           const editorRoot = document.getElementById("descriptionEditor");
           if (!editorRoot) return;
-          const defaultUI =
-            editorRoot.querySelector(".toastui-editor-defaultUI");
+          const defaultUI = editorRoot.querySelector(
+            ".toastui-editor-defaultUI"
+          );
           if (!defaultUI) return;
 
           const main = defaultUI.querySelector(".toastui-editor-main");
@@ -1044,8 +1063,9 @@
           main.style.height = "auto";
 
           const toolbar = defaultUI.querySelector(".toastui-editor-toolbar");
-          const modeSwitch =
-            defaultUI.querySelector(".toastui-editor-mode-switch");
+          const modeSwitch = defaultUI.querySelector(
+            ".toastui-editor-mode-switch"
+          );
           const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
           const modeSwitchHeight = modeSwitch ? modeSwitch.offsetHeight : 0;
 
@@ -1131,6 +1151,13 @@
               landingHeaderText.parentNode.removeChild(landingHeaderText);
             }
             initialPromptWrapper.parentNode.removeChild(initialPromptWrapper);
+          }
+
+          if (
+            landingInputGroup &&
+            landingInputGroup.hasAttribute("data-landing-style")
+          ) {
+            landingInputGroup.removeAttribute("data-landing-style");
           }
 
           if (descriptionCard) {
@@ -1451,13 +1478,20 @@
           searchButton.classList.toggle("hidden", !hasTerms);
         }
 
-        const combinedTerms = [...currentTerms.deviceTerms, ...currentTerms.technologyTerms];
-        const sortedDeviceTerms = combinedTerms.slice().sort((a, b) =>
-          a.localeCompare(b, undefined, { sensitivity: "base" })
-        );
+        const combinedTerms = [
+          ...currentTerms.deviceTerms,
+          ...currentTerms.technologyTerms,
+        ];
+        const sortedDeviceTerms = combinedTerms
+          .slice()
+          .sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" })
+          );
         const sortedSubjectTerms = currentTerms.subjectTerms
           .slice()
-          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+          .sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" })
+          );
 
         renderTerms("deviceTechTerms", sortedDeviceTerms, "device");
         renderTerms("subjectTerms", sortedSubjectTerms, "subject");
@@ -1846,9 +1880,7 @@
           }
           searchQuery = queryParts.join(" ");
         } else {
-          const description = descriptionEditor
-            .getMarkdown()
-            .trim();
+          const description = descriptionEditor.getMarkdown().trim();
           if (!description) {
             alert("You must generate terms from invention title first.");
             restoreSearchButton(searchButton);
