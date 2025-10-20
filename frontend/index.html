@@ -613,7 +613,8 @@
 
       .result-title {
         font-weight: 600;
-        color: #111827;
+        color: #222222;
+        height: 3rem;
       }
 
       .result-abstract {
@@ -2306,10 +2307,17 @@
             ? `<span class="score-badge ${scoreClass}">${displayScore}</span>`
             : "";
 
+        const MAX_TITLE_LENGTH = 58;
+        const title = result.title || "Untitled Patent";
+        const displayTitle =
+          title.length > MAX_TITLE_LENGTH
+            ? `${title.slice(0, MAX_TITLE_LENGTH)}…`
+            : title;
+
         const resultHTML = `
     <div class="result-item">
       <div class="result-title">
-        ${result.title || "Untitled Patent"}
+        ${displayTitle}
       </div>
       <div style="margin-top: 0.5rem; margin-bottom: 0.5rem">
       ${scoreDisplay}
