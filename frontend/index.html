@@ -241,8 +241,6 @@
       .input-group {
         display: flex;
         gap: 0.5rem;
-        transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .input-group:hover {
@@ -262,10 +260,6 @@
         background-color: #ffffff;
         height: 10rem;
         border: 1px solid gainsboro;
-      }
-
-      .input-group[data-landing-style="true"]:hover {
-        border-color: whitesmoke; 
       }
 
       input[type="text"],
@@ -849,6 +843,7 @@
                 type="text"
                 id="promptInput"
                 placeholder="Describe the invention"
+                autofocus
                 style="
                   padding-inline-start: 1.5rem;
                   padding-top: 1rem;
