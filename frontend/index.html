@@ -733,6 +733,59 @@
         font-weight: bold;
         color: #a5f3fc;
       }
+
+      :root {
+        --rainbow-1: hsl(0 100% 63%);
+        --rainbow-2: hsl(270 100% 63%);
+        --rainbow-3: hsl(210 100% 63%);
+        --rainbow-4: hsl(195 100% 63%);
+        --rainbow-5: hsl(90 100% 63%);
+      }
+
+      .rainbow-button {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(#141414, #141414) padding-box,
+          linear-gradient(
+              90deg,
+              var(--rainbow-1),
+              var(--rainbow-5),
+              var(--rainbow-3),
+              var(--rainbow-4),
+              var(--rainbow-2)
+            )
+            border-box;
+        border: 2px solid transparent;
+        background-size: 200%;
+        animation: rainbowShift 3s linear infinite;
+      }
+
+      .rainbow-button::before {
+        content: "";
+        position: absolute;
+        inset: 80% 20% -40%;
+        background: linear-gradient(
+          90deg,
+          var(--rainbow-1),
+          var(--rainbow-5),
+          var(--rainbow-3),
+          var(--rainbow-4),
+          var(--rainbow-2)
+        );
+        background-size: 200%;
+        filter: blur(18px);
+        z-index: -1;
+        animation: rainbowShift 3s linear infinite;
+      }
+
+      @keyframes rainbowShift {
+        0% {
+          background-position: 0%;
+        }
+        100% {
+          background-position: 200%;
+        }
+      }
     </style>
   </head>
   <body>
@@ -937,7 +990,7 @@
               />
             </div>
             <button
-              class="btn-primary btn-large hidden"
+              class="btn-primary btn-large hidden rainbow-button"
               onclick="startSearch()"
               id="searchButton"
               style="margin-top: 1.5rem; align-self: start; width: 95px"
