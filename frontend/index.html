@@ -95,25 +95,81 @@
         border: 1px solid gainsboro;
       }
 
+      .watch-demo-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: transparent;
+        border: none;
+        color: purple;
+        font-family: sans-serif;
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+      }
+
       .play-icon {
         position: relative;
         display: inline-flex;
         width: 24px;
         height: 24px;
-        border: 2px solid currentColor;
+        border: 2px solid purple;
         border-radius: 50%;
-        color: blue;
         align-items: center;
         justify-content: center;
       }
 
       .play-icon::before {
         content: "";
-        width: 10px;
+        width: 11px;
         height: 12px;
-        background: blue;
-        clip-path: polygon(20% 10%, 20% 90%, 91% 50%);
+        background: purple;
+        clip-path: polygon(20% 10%, 20% 90%, 90% 50%);
+        border-radius: 3px;
         transform: translateX(1px);
+      }
+
+      .video-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.2);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1100;
+        padding: 1.5rem;
+      }
+
+      .video-modal-backdrop.show {
+        display: flex;
+      }
+
+      .video-modal {
+        background: white;
+        border-radius: 0.75rem;
+        max-width: 800px;
+        width: 100%;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+        padding: 1.5rem;
+        position: relative;
+      }
+
+      .video-modal-close {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        color: #1f2937;
+      }
+
+      .video-modal video {
+        width: 100%;
+        border-radius: 0.5rem;
+        display: block;
       }
 
       h1 {
@@ -907,10 +963,15 @@
                 margin-top: 0.5rem;
               "
             >
-              <span class="play-icon" aria-hidden="true"></span>
-              <p style="font-family: sans-serif; margin-left: 4px; color: blue">
-                Watch how it works (1:03)
-              </p>
+              <button
+                class="watch-demo-button"
+                type="button"
+                id="watchDemoButton"
+                aria-haspopup="dialog"
+              >
+                <span class="play-icon" aria-hidden="true"></span>
+                <span>Watch how it works (1:03)</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1140,6 +1201,44 @@
       <div id="resultsContainer" class="results-container hidden"></div>
     </main>
 
+    <div
+      id="videoModal"
+      class="video-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="videoModalTitle"
+      aria-hidden="true"
+    >
+      <div class="video-modal">
+        <button
+          type="button"
+          class="video-modal-close"
+          aria-label="Close video"
+          id="closeVideoModalButton"
+        >
+          &times;
+        </button>
+        <h3
+          id="videoModalTitle"
+          style="
+            font-family: sans-serif;
+            font-size: 1.125rem;
+            margin-bottom: 0.75rem;
+            color: #111827;
+          "
+        >
+          Watch how it works
+        </h3>
+        <video id="demoVideo" controls preload="metadata">
+          <source
+            src="{{ url_for('static', path='patty-demo.mp4') }}"
+            type="video/mp4"
+          />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
+
     <div id="termPopover" class="popover">
       <div id="popoverHoverTitle">
         <div class="popover-title">Related Terms</div>
@@ -1183,6 +1282,65 @@
       let popoverTimeout = null;
       let lastSearchQuery = "";
       let lastTopK = 100;
+
+      const watchDemoButton = document.getElementById("watchDemoButton");
+      const videoModal = document.getElementById("videoModal");
+      const demoVideo = document.getElementById("demoVideo");
+      const closeVideoModalButton = document.getElementById(
+        "closeVideoModalButton"
+      );
+
+      function openVideoModal() {
+        if (!videoModal || !demoVideo) return;
+        videoModal.classList.add("show");
+        videoModal.setAttribute("aria-hidden", "false");
+        demoVideo.currentTime = 0;
+        const playPromise = demoVideo.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {
+            /* Ignore autoplay rejection; user can press play manually */
+          });
+        }
+        if (closeVideoModalButton) {
+          closeVideoModalButton.focus();
+        }
+      }
+
+      function closeVideoModal() {
+        if (!videoModal || !demoVideo) return;
+        demoVideo.pause();
+        videoModal.classList.remove("show");
+        videoModal.setAttribute("aria-hidden", "true");
+        if (watchDemoButton) {
+          watchDemoButton.focus();
+        }
+      }
+
+      if (watchDemoButton) {
+        watchDemoButton.addEventListener("click", openVideoModal);
+      }
+
+      if (closeVideoModalButton) {
+        closeVideoModalButton.addEventListener("click", closeVideoModal);
+      }
+
+      if (videoModal) {
+        videoModal.addEventListener("click", (event) => {
+          if (event.target === videoModal) {
+            closeVideoModal();
+          }
+        });
+      }
+
+      document.addEventListener("keydown", (event) => {
+        if (
+          event.key === "Escape" &&
+          videoModal &&
+          videoModal.classList.contains("show")
+        ) {
+          closeVideoModal();
+        }
+      });
       let scoreThreshold = 60;
       let popoverContext = {
         mode: null,
