@@ -51,8 +51,9 @@ It downloads the file, then unzips everything and then removes everything except
    ```bash
    bash scripts/vm_setup.sh
    ```
-3. **Bundle the embedding model** – the setup script installs `sentence-transformers` and will download `all-MiniLM-L6-v2` into `api/models/` when the repo exists at `~/patent-search`. If you need to refresh manually, run:
+3. **Bundle the embedding model** – the setup script installs `sentence-transformers==5.1.1` and will download `all-MiniLM-L6-v2` into `api/models/` when the repo exists at `~/patent-search`. If you need to refresh manually, run:
    ```bash
+   python3 -m pip install "sentence-transformers==5.1.1"
    python3 - <<'PY'
    from sentence_transformers import SentenceTransformer
    from pathlib import Path

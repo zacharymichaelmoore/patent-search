@@ -30,7 +30,7 @@ sudo apt-get install -y wget curl unzip git htop jq bc
 
 echo "Upgrading pip and installing Python packages..."
 python3 -m pip install --user --upgrade pip
-python3 -m pip install --user sentence-transformers
+python3 -m pip install --user "sentence-transformers==5.1.1"
 
 # Pre-download the embeddings model so the API can run offline
 MODEL_DIR="$HOME/patent-search/api/models/all-MiniLM-L6-v2"
