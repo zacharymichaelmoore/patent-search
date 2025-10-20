@@ -605,6 +605,9 @@
         border-radius: 0.5rem;
         padding: 1.25rem;
         margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
       }
 
       .result-item:last-child {
@@ -807,7 +810,7 @@
         id="initialPromptWrapper"
         style="display: flex; flex-direction: column; margin-top: 3rem"
       >
-        <div class="card" style="margin-bottom: 5rem;">
+        <div class="card" style="margin-bottom: 5rem">
           <div class="landing-header-text" id="landingHeaderText">
             <div style="display: flex; align-items: center; padding-left: 9px">
               <h1>Find patents with</h1>
@@ -1000,7 +1003,13 @@
               onclick="startSearch()"
               id="searchButton"
               data-default-label="Find related patents"
-              style="margin-top: 1.5rem; align-self: start; width: 180px; font-family: sans-serif; font-size: 0.9rem"
+              style="
+                margin-top: 1.5rem;
+                align-self: start;
+                width: 180px;
+                font-family: sans-serif;
+                font-size: 0.9rem;
+              "
             >
               Find related patents
             </button>
@@ -2008,8 +2017,7 @@
         const { hideAfterRestore = false } = options;
         button.disabled = false;
         const resetLabel =
-          button.dataset.defaultLabel ||
-          SEARCH_BUTTON_DEFAULT_LABEL;
+          button.dataset.defaultLabel || SEARCH_BUTTON_DEFAULT_LABEL;
         button.innerHTML = resetLabel;
         button.style.display = "";
         button.style.alignItems = "";
