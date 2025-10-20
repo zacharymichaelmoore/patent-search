@@ -55,7 +55,7 @@
       }
 
       .toastui-editor-contents {
-        padding: 3rem 4rem !important;
+        padding: 5rem 4rem !important;
         font-size: 1rem !important;
       }
 
@@ -203,7 +203,7 @@
       }
 
       #descriptionEditor {
-        margin-top: 0.5rem;
+        margin-top: 1.5rem;
       }
 
       .landing-header-text {
@@ -1034,9 +1034,15 @@
             ></p>
             <button
               id="showResultsButton"
-              class="btn-primary btn-large hidden"
+              class="btn-primary btn-large hidden rainbow-button"
               type="button"
-              style="margin-top: 1rem; color: black; background-color: #e5e5e5"
+              style="
+                margin-top: 1.5rem;
+                align-self: start;
+                width: 180px;
+                font-family: sans-serif;
+                font-size: 0.9rem;
+              "
               onclick="showResultsView()"
             >
               Show results
@@ -1443,7 +1449,7 @@
         } finally {
           isGeneratingDescription = false;
           btn.disabled = false;
-          btn.textContent = "Generate";
+          btn.textContent = "Create description";
           if (indicator) {
             indicator.classList.add("hidden");
             indicator.setAttribute("aria-hidden", "true");
