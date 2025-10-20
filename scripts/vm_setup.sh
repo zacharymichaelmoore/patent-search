@@ -28,6 +28,32 @@ sudo apt-get install -y docker-compose-plugin
 sudo apt-get install -y python3 python3-pip python3-venv
 sudo apt-get install -y wget curl unzip git htop jq bc
 
+echo "Upgrading pip and installing Python packages..."
+python3 -m pip install --user --upgrade pip
+python3 -m pip install --user sentence-transformers
+
+# Pre-download the embeddings model so the API can run offline
+MODEL_DIR="$HOME/patent-search/api/models/all-MiniLM-L6-v2"
+if [ -d "$HOME/patent-search" ]; then
+    echo "Ensuring sentence-transformers model exists at $MODEL_DIR..."
+    python3 - <<'PY'
+from pathlib import Path
+from sentence_transformers import SentenceTransformer
+
+target = Path.home() / "patent-search" / "api" / "models" / "all-MiniLM-L6-v2"
+if target.exists():
+    print(f"Model already present at {target}")
+else:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    print("Downloading sentence-transformers/all-MiniLM-L6-v2 ...")
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    model.save(str(target))
+    print(f"Model saved to {target}")
+PY
+else
+    echo "Clone the patent-search repo into ~/patent-search before downloading the model."
+fi
+
 # NVIDIA container toolkit for GPU-aware Docker
 echo "Configuring NVIDIA Container Toolkit..."
 distribution=$(. /etc/os-release; echo ${ID}${VERSION_ID})

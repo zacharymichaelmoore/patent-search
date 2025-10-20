@@ -15,6 +15,7 @@ import os
 import re
 import httpx
 import logging
+from pathlib import Path
 from typing import Optional, Dict, Any
 from collections import deque
 
@@ -58,7 +59,19 @@ app.include_router(related_terms.router)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 templates = Jinja2Templates(directory="frontend")
 
-EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
+_DEFAULT_EMBED_MODEL_PATH = (
+    Path(__file__).resolve().parent / "models" / "all-MiniLM-L6-v2"
+)
+EMBED_MODEL_NAME = os.getenv(
+    "EMBED_MODEL_NAME",
+    str(_DEFAULT_EMBED_MODEL_PATH),
+)
+if EMBED_MODEL_NAME == str(_DEFAULT_EMBED_MODEL_PATH) and not _DEFAULT_EMBED_MODEL_PATH.exists():
+    raise FileNotFoundError(
+        "Expected bundled sentence-transformer model at "
+        f"{_DEFAULT_EMBED_MODEL_PATH}. Set `EMBED_MODEL_NAME` to an alternate "
+        "path or download the model into that directory before starting the API."
+    )
 OLLAMA_URL = os.getenv(
     "OLLAMA_URL", "http://host.docker.internal:11434/api/generate")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")

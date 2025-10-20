@@ -47,14 +47,25 @@ It downloads the file, then unzips everything and then removes everything except
    git clone <repo-url> ~/patent-search
    cd ~/patent-search
    ```
-2. **Run the setup script** (`scripts/vm_setup.sh:1-49`) – installs Docker/Compose, NVIDIA container toolkit, common packages, and prepares `~/qdrant_storage`.
+2. **Run the setup script** (`scripts/vm_setup.sh`) – installs Docker/Compose, NVIDIA container toolkit, common packages, and prepares `~/qdrant_storage`.
    ```bash
    bash scripts/vm_setup.sh
    ```
-3. **Enable vectorizer alias** – append the alias shown above to `~/.bashrc`, then reload your shell: `source ~/.bashrc`. Log out/in once so Docker group membership takes effect.
-4. **Provision Ollama model** – follow the commands in the next section to install Ollama and create `llama3.1-gpu-optimized`.
-5. **Launch core services** – from the repo root run `docker compose up -d` to start `patent-app` and `qdrant`.
-6. **Vectorization workflow** – place USPTO XML dumps under `/mnt/storage_pool/uspto`, open a screen window, and run `vectorize` to build the container and ingest data into Qdrant.
+3. **Bundle the embedding model** – the setup script installs `sentence-transformers` and will download `all-MiniLM-L6-v2` into `api/models/` when the repo exists at `~/patent-search`. If you need to refresh manually, run:
+   ```bash
+   python3 - <<'PY'
+   from sentence_transformers import SentenceTransformer
+   from pathlib import Path
+   target = Path.home() / "patent-search" / "api" / "models" / "all-MiniLM-L6-v2"
+   target.parent.mkdir(parents=True, exist_ok=True)
+   SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2").save(str(target))
+   PY
+   ```
+   Rebuild the Docker image (`docker build -t patent-app:latest .`) whenever the on-disk model changes.
+4. **Enable vectorizer alias** – append the alias shown above to `~/.bashrc`, then reload your shell: `source ~/.bashrc`. Log out/in once so Docker group membership takes effect.
+5. **Provision Ollama model** – follow the commands in the next section to install Ollama and create `llama3.1-gpu-optimized`.
+6. **Launch core services** – from the repo root run `docker compose up -d` to start `patent-app` and `qdrant`.
+7. **Vectorization workflow** – place USPTO XML dumps under `/mnt/storage_pool/uspto`, open a screen window, and run `vectorize` to build the container and ingest data into Qdrant.
 
 ## Setup and Configuration
 
@@ -86,6 +97,10 @@ export OLLAMA_CONCURRENCY=32
 export QDRANT_FETCH_COUNT=100
 export HIGH_SCORE_THRESHOLD=60
 ```
+
+---
+
+> The API loads the sentence-transformer from `api/models/all-MiniLM-L6-v2` by default. Set `EMBED_MODEL_NAME` if you keep the model in a different location.
 
 ---
 
