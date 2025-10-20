@@ -241,6 +241,11 @@
       .input-group {
         display: flex;
         gap: 0.5rem;
+        transition: box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .input-group:hover {
+        box-shadow: 0px 7px 16px rgba(198, 2, 198, 0.07);
       }
 
       input:focus::placeholder {
