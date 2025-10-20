@@ -748,11 +748,21 @@
     </header>
 
     <main>
-      <div class="initial-center" id="initialPromptWrapper" style="display: flex; flex-direction: column; margin-top: 3rem;">
+      <div
+        class="initial-center"
+        id="initialPromptWrapper"
+        style="display: flex; flex-direction: column; margin-top: 3rem"
+      >
         <div class="card">
           <div class="landing-header-text" id="landingHeaderText">
-            
-            <div style="display: flex; align-items: center; padding-left: 9px;"><h1>Find patents with</h1><img src="{{ url_for('static', path='patty-logo.svg') }}" width="200px" style="padding-bottom: 4px;" /></div>
+            <div style="display: flex; align-items: center; padding-left: 9px">
+              <h1>Find patents with</h1>
+              <img
+                src="{{ url_for('static', path='patty-logo.svg') }}"
+                width="200px"
+                style="padding-bottom: 4px"
+              />
+            </div>
             <p class="subtitle">
               Securely and instantly find patents and conduct Prior Art
               research.
@@ -794,13 +804,38 @@
             </div>
           </div>
         </div>
-        <div id="landingInfoRow" style="width: 100%; display: flex; justify-content: center;">
-          <div style="display: flex; width: 80%; justify-content: space-around; margin-top: 3rem; align-items: center; margin-right: 2rem; margin-left: 2rem;">
-            <div style="width: 300px; color: gray; align-self: normal;"><p>Only key search terms are sent to the server, description is not stored on our server and no logs are kept.</p></div>
-            <div style="color: gray;">•</div>
-            <div style="width: 300px; color: gray; align-self: normal;"><p>No external api calls are made to other 3rd party services, all analysis is a proprietary and internal engine.</p></div>
-            <div style="color: gray;">•</div>
-            <div style="width: 300px; color: gray; align-self: normal;"><p>Full index of patents from 2010 - Present from the USPTO. </p></div>
+        <div
+          id="landingInfoRow"
+          style="width: 100%; display: flex; justify-content: center"
+        >
+          <div
+            style="
+              display: flex;
+              width: 80%;
+              justify-content: space-around;
+              margin-top: 3rem;
+              align-items: center;
+              margin-right: 2rem;
+              margin-left: 2rem;
+            "
+          >
+            <div style="width: 300px; color: gray; align-self: normal">
+              <p>
+                Only key search terms are sent to the server, description is not
+                stored on our server and no logs are kept.
+              </p>
+            </div>
+            <div style="color: lightgray">•</div>
+            <div style="width: 300px; color: gray; align-self: normal">
+              <p>
+                No external api calls are made to other 3rd party services, all
+                analysis is a proprietary and internal engine.
+              </p>
+            </div>
+            <div style="color: lightgray">•</div>
+            <div style="width: 300px; color: gray; align-self: normal">
+              <p>Full index of patents from 2010 - Present from the USPTO.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -809,9 +844,15 @@
         <!-- Left: Description Editor -->
         <div class="card" id="descriptionCard">
           <h2 class="card-title">Description</h2>
+          <p style="color: gray">
+            🔒 100% Private - The invention and description never leaves your
+            browser.
+          </p>
+          <p style="color: gray">
+            The description is only used to construct a search query.
+          </p>
 
           <div class="input-section hidden" id="descriptionSection">
-            <!-- <label for="userDescription">Description</label> -->
             <div
               class="progress-container hidden"
               id="generatingIndicator"
@@ -917,7 +958,7 @@
                 margin-top: 2rem;
                 color: black;
                 font-size: 0.875rem;
-                padding: .5rem;
+                padding: 0.5rem;
                 background-color: white;
                 border-radius: 0.25rem;
               "
@@ -926,7 +967,7 @@
               id="showResultsButton"
               class="btn-primary btn-large hidden"
               type="button"
-              style="margin-top: 1rem; color: black; background-color: #e5e5e5;"
+              style="margin-top: 1rem; color: black; background-color: #e5e5e5"
               onclick="showResultsView()"
             >
               Show results
@@ -2141,7 +2182,8 @@
             }
             showResultsButton.classList.remove("hidden");
           }
-          searchStatusMessage.textContent = 'Search failed. Select "Show results" to review the error and try again.';
+          searchStatusMessage.textContent =
+            'Search failed. Select "Show results" to review the error and try again.';
           searchStatusMessage.classList.remove("hidden");
           if (eventSource) {
             eventSource.close();
