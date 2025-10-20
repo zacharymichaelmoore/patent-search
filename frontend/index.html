@@ -95,6 +95,27 @@
         border: 1px solid gainsboro;
       }
 
+      .play-icon {
+        position: relative;
+        display: inline-flex;
+        width: 24px;
+        height: 24px;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        color: blue;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .play-icon::before {
+        content: "";
+        width: 10px;
+        height: 12px;
+        background: blue;
+        clip-path: polygon(20% 10%, 20% 90%, 91% 50%);
+        transform: translateX(1px);
+      }
+
       h1 {
         font-size: 3.5rem;
         font-family: auto;
@@ -830,44 +851,66 @@
               research.
             </p>
           </div>
-          <div id="promptSection">
-            <label for="promptInput" id="titleLabel" class="hidden"
-              >Title</label
-            >
-            <div class="input-group" data-landing-style="true">
-              <input
-                type="text"
-                id="promptInput"
-                placeholder="Describe the invention"
-                autofocus
-                style="
-                  padding-inline-start: 1.5rem;
-                  padding-top: 1rem;
-                  height: fit-content;
-                  border: none;
-                  border-radius: 2rem;
-                  margin-top: 0.5rem;
-                  margin-left: 0.5rem;
-                "
-                autocomplete="off"
-              />
-              <button
-                class="btn-primary rainbow-button"
-                style="
-                  place-self: flex-end;
-                  height: 44px;
-                  margin-right: 1rem;
-                  margin-bottom: 1rem;
-                  width: -webkit-fill-available;
-                  max-width: fit-content;
-                  font-family: sans-serif;
-                  font-size: 0.9rem;
-                "
-                onclick="generateDescription()"
-                id="generateBtn"
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            "
+          >
+            <div id="promptSection">
+              <label for="promptInput" id="titleLabel" class="hidden"
+                >Title</label
               >
-                Create description
-              </button>
+              <div class="input-group" data-landing-style="true">
+                <input
+                  type="text"
+                  id="promptInput"
+                  placeholder="Describe the invention"
+                  autofocus
+                  style="
+                    padding-inline-start: 1.5rem;
+                    padding-top: 1rem;
+                    height: fit-content;
+                    border: none;
+                    border-radius: 2rem;
+                    margin-top: 0.5rem;
+                    margin-left: 0.5rem;
+                  "
+                  autocomplete="off"
+                />
+                <button
+                  class="btn-primary rainbow-button"
+                  style="
+                    place-self: flex-end;
+                    height: 44px;
+                    margin-right: 1rem;
+                    margin-bottom: 1rem;
+                    width: -webkit-fill-available;
+                    max-width: fit-content;
+                    font-family: sans-serif;
+                    font-size: 0.9rem;
+                  "
+                  onclick="generateDescription()"
+                  id="generateBtn"
+                >
+                  Create description
+                </button>
+              </div>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                margin-top: 0.5rem;
+              "
+            >
+              <span class="play-icon" aria-hidden="true"></span>
+              <p style="font-family: sans-serif; margin-left: 4px; color: blue">
+                Watch how it works (1:03)
+              </p>
             </div>
           </div>
         </div>
