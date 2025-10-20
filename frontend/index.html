@@ -998,6 +998,7 @@
               class="btn-primary btn-large hidden rainbow-button"
               onclick="startSearch()"
               id="searchButton"
+              data-default-label="Find related patents"
               style="margin-top: 1.5rem; align-self: start; width: 180px; font-family: sans-serif; font-size: 0.9rem"
             >
               Find related patents
@@ -1158,6 +1159,17 @@
         device: new Map(),
         subject: new Map(),
       };
+      const SEARCH_BUTTON_DEFAULT_LABEL = "Find related patents";
+      const searchButtonEl = document.getElementById("searchButton");
+      if (searchButtonEl) {
+        const initialLabel = searchButtonEl.textContent.trim();
+        searchButtonEl.dataset.defaultLabel =
+          searchButtonEl.dataset.defaultLabel ||
+          (initialLabel ? initialLabel : SEARCH_BUTTON_DEFAULT_LABEL);
+        if (!initialLabel) {
+          searchButtonEl.textContent = SEARCH_BUTTON_DEFAULT_LABEL;
+        }
+      }
       const resultsContainerEl = document.getElementById("resultsContainer");
       const downloadButtonEl = document.getElementById("downloadButton");
       const showResultsButton = document.getElementById("showResultsButton");
@@ -1994,7 +2006,10 @@
         if (!button) return;
         const { hideAfterRestore = false } = options;
         button.disabled = false;
-        button.innerHTML = "Search";
+        const resetLabel =
+          button.dataset.defaultLabel ||
+          SEARCH_BUTTON_DEFAULT_LABEL;
+        button.innerHTML = resetLabel;
         button.style.display = "";
         button.style.alignItems = "";
         button.style.justifyContent = "";
