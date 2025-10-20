@@ -99,6 +99,8 @@ def format_sse(event: str, data: Dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 # ---- HELPERS ----
+
+
 def read_total_patents_from_log() -> Optional[int]:
     try:
         if not os.path.exists(VECTOR_LOG_PATH):
@@ -118,17 +120,20 @@ def read_total_patents_from_log() -> Optional[int]:
 
 def read_total_patents_from_qdrant() -> Optional[int]:
     try:
-        count_result = _qdrant.count(collection_name=QDRANT_COLLECTION, exact=True)
+        count_result = _qdrant.count(
+            collection_name=QDRANT_COLLECTION, exact=True)
         count_value = getattr(count_result, "count", None)
         if isinstance(count_value, (int, float)):
             return int(count_value)
         # Some Qdrant versions expose points_count only via get_collection
-        collection_info = _qdrant.get_collection(collection_name=QDRANT_COLLECTION)
+        collection_info = _qdrant.get_collection(
+            collection_name=QDRANT_COLLECTION)
         fallback_value = getattr(collection_info, "points_count", None)
         if isinstance(fallback_value, (int, float)):
             return int(fallback_value)
     except Exception as exc:
-        logger.warning("Failed to fetch total patent count from Qdrant: %s", exc)
+        logger.warning(
+            "Failed to fetch total patent count from Qdrant: %s", exc)
     return None
 
 
@@ -395,6 +400,7 @@ async def event_stream(user_description: str, max_display_results: int):
         print(
             f"[ERROR][SEARCH] event_stream failed:\n{traceback.format_exc()}")
         yield format_sse("error", {"message": str(e)})
+
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend(request: Request):
