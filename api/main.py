@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request, Query, Response
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -15,9 +15,11 @@ import os
 import re
 import httpx
 import logging
+import time
 from pathlib import Path
-from typing import Optional, Dict, Any
-from collections import deque
+from typing import Optional, Dict, Any, Deque
+from collections import deque, defaultdict
+from starlette import status
 
 
 def _safe_int_env(var_name: str, default: int, minimum: int = 1) -> int:
@@ -59,6 +61,44 @@ app.include_router(related_terms.router)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 templates = Jinja2Templates(directory="frontend")
 
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.method == "OPTIONS" or request.url.path.startswith("/static"):
+        return await call_next(request)
+
+    client_host = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    window = RATE_LIMIT_WINDOW_SECONDS
+
+    async with _rate_limit_lock:
+        bucket = _rate_limit_records[client_host]
+        while bucket and now - bucket[0] > window:
+            bucket.popleft()
+        if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+            retry_after = max(1, int(window))
+            return Response(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content="Too many requests. Please try again later.",
+                headers={"Retry-After": str(retry_after)},
+            )
+        bucket.append(now)
+
+    response = await call_next(request)
+
+    # Clean up stale entries so the in-memory store stays bounded
+    if client_host != "unknown":
+        cutoff = time.monotonic() - window
+        async with _rate_limit_lock:
+            bucket = _rate_limit_records.get(client_host)
+            if bucket:
+                while bucket and bucket[0] < cutoff:
+                    bucket.popleft()
+                if not bucket:
+                    _rate_limit_records.pop(client_host, None)
+
+    return response
+
 _DEFAULT_EMBED_MODEL_PATH = (
     Path(__file__).resolve().parent / "models" / "all-MiniLM-L6-v2"
 )
@@ -85,6 +125,12 @@ OLLAMA_TIMEOUT_SECONDS = _safe_float_env("OLLAMA_TIMEOUT_SECONDS", 120.0)
 VECTOR_LOG_PATH = os.getenv(
     "VECTOR_LOG_PATH", "/mnt/storage_pool/global/vectorization_log.csv"
 )
+
+RATE_LIMIT_MAX_REQUESTS = _safe_int_env("RATE_LIMIT_MAX_REQUESTS", 120)
+RATE_LIMIT_WINDOW_SECONDS = _safe_int_env("RATE_LIMIT_WINDOW_SECONDS", 60)
+
+_rate_limit_records: Dict[str, Deque[float]] = defaultdict(deque)
+_rate_limit_lock = asyncio.Lock()
 
 _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
