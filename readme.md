@@ -121,6 +121,7 @@ as opposed to the `docker-compose.dev.yml` which is for local development.
 |--------|-----------|-------------|
 | **GET** | `/` | Serves the main HTML frontend |
 | **POST** | `/api/search` | Initiates a patent search and streams results |
+| **POST** | `/api/search/enqueue` | Reserves a search slot and returns queue status |
 | **POST** | `/api/extract-terms` | Extracts key terms using the LLM |
 | **POST** | `/api/generate-description` | Generates invention descriptions |
 | **GET** | `/health` | Health check endpoint |
@@ -160,10 +161,60 @@ as opposed to the `docker-compose.dev.yml` which is for local development.
 
 5. **Testing**  
    - `http://localhost:8000/health` confirms the backend is reachable.  
-   - `curl http://localhost:8080/index.html | head` shows the exact HTML being served locally.
+ - `curl http://localhost:8080/index.html | head` shows the exact HTML being served locally.
 
 6. **Cleanup**  
-   - Stop the static server with `Ctrl+C`.  
-   - Close the tunnel by exiting the SSH session (`Ctrl+C`).
+  - Stop the static server with `Ctrl+C`.  
+  - Close the tunnel by exiting the SSH session (`Ctrl+C`).
 
 > Tip: if you need automatic refresh, swap `python3 -m http.server` with a watcher such as `live-server` or Vite.
+
+### Run the backend locally against VM services
+
+Use this when you want to exercise new API code (for example, the search queue) without deploying.
+
+1. **Copy the embedding model once**
+   ```bash
+   scp -r -i ~/.ssh/google_compute_engine \
+     zacharymoore@34.182.86.63:/home/zacharymoore/patent-search/api/models/all-MiniLM-L6-v2 \
+     /Users/zacharymoore/Documents/GitHub/patent-search/api/models/
+   ```
+
+2. **Open an SSH tunnel to Qdrant and Ollama on the VM**
+   ```bash
+   ssh -i ~/.ssh/google_compute_engine \
+       -L 6333:localhost:6333 \
+       -L 11434:localhost:11434 \
+       zacharymoore@34.182.86.63
+   ```
+   Leave this session open.
+
+3. **Start Uvicorn locally**
+   ```bash
+   cd /Users/zacharymoore/Documents/GitHub/patent-search
+   source .venv/bin/activate
+   export QDRANT_URL=http://localhost:6333
+   export OLLAMA_URL=http://localhost:11434/api/generate
+   uvicorn api.main:app --reload --port 9000
+   ```
+
+4. **Test the search queue**
+   ```bash
+   for i in {1..6}; do
+     curl -s -X POST http://localhost:9000/api/search/enqueue \
+       -H 'Content-Type: application/json' \
+       -d '{"userDescription":"test gadget","maxDisplayResults":15}'
+     echo
+   done
+   ```
+   The first five responses should include `"granted": true`, and the sixth should return `"queued": true` with `queueToken` and `queuePosition`.
+
+5. **Consume a granted slot**
+   ```bash
+   curl -N "http://localhost:9000/api/search?userDescription=test%20gadget&maxDisplayResults=15&queueToken=REPLACE_WITH_GRANTED_TOKEN"
+   ```
+   Cancel the stream with `Ctrl+C` to release the slot. Queued tokens can be polled again via `/api/search/enqueue` until they are granted.
+
+6. **Cleanup**
+   - Stop Uvicorn with `Ctrl+C`.
+   - Close the SSH tunnel session.

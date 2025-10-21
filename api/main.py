@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Query, Response
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +16,9 @@ import re
 import httpx
 import logging
 import time
+import secrets
 from pathlib import Path
-from typing import Optional, Dict, Any, Deque
+from typing import Optional, Dict, Any, Tuple, Deque
 from collections import deque, defaultdict
 from starlette import status
 
@@ -99,6 +100,88 @@ async def rate_limit_middleware(request: Request, call_next):
 
     return response
 
+
+def _cleanup_search_state(now: float) -> None:
+    global _search_inflight
+    if SEARCH_QUEUE_STALE_SECONDS <= 0:
+        return
+
+    cutoff = SEARCH_QUEUE_STALE_SECONDS
+
+    for token in list(_search_queue):
+        timestamp = _search_queue_timestamps.get(token)
+        if timestamp is None or now - timestamp > cutoff:
+            try:
+                _search_queue.remove(token)
+            except ValueError:
+                pass
+            _search_queue_timestamps.pop(token, None)
+
+    for token, timestamp in list(_search_active_tokens.items()):
+        if now - timestamp > cutoff:
+            _search_active_tokens.pop(token, None)
+            if _search_inflight > 0:
+                _search_inflight -= 1
+
+
+async def _acquire_search_slot(queue_token: Optional[str]) -> Tuple[bool, str, int]:
+    global _search_inflight
+    token = queue_token if isinstance(queue_token, str) and queue_token else None
+    now = time.monotonic()
+
+    async with _search_queue_lock:
+        _cleanup_search_state(now)
+
+        if token and token in _search_queue_timestamps:
+            _search_queue_timestamps[token] = now
+            try:
+                index = _search_queue.index(token)
+            except ValueError:
+                index = None
+            else:
+                ahead = _search_inflight + index
+                if _search_inflight < SEARCH_MAX_CONCURRENT and index == 0:
+                    _search_queue.popleft()
+                    _search_queue_timestamps.pop(token, None)
+                    _search_inflight += 1
+                    _search_active_tokens[token] = now
+                    return True, token, 0
+                return False, token, ahead
+
+        if _search_inflight < SEARCH_MAX_CONCURRENT and not _search_queue:
+            token = token or secrets.token_urlsafe(8)
+            _search_inflight += 1
+            _search_active_tokens[token] = now
+            return True, token, 0
+
+        token = token or secrets.token_urlsafe(8)
+        if token not in _search_queue:
+            _search_queue.append(token)
+        _search_queue_timestamps[token] = now
+        ahead = _search_inflight + (_search_queue.index(token) if token in _search_queue else 0)
+        return False, token, ahead
+
+
+async def _confirm_active_search_token(token: str) -> bool:
+    now = time.monotonic()
+    async with _search_queue_lock:
+        if token in _search_active_tokens:
+            _search_active_tokens[token] = now
+            return True
+    return False
+
+
+async def _release_search_slot(token: Optional[str]) -> None:
+    global _search_inflight
+    if not token:
+        return
+    async with _search_queue_lock:
+        _search_active_tokens.pop(token, None)
+        if _search_inflight > 0:
+            _search_inflight -= 1
+        _cleanup_search_state(time.monotonic())
+
+
 _DEFAULT_EMBED_MODEL_PATH = (
     Path(__file__).resolve().parent / "models" / "all-MiniLM-L6-v2"
 )
@@ -131,6 +214,15 @@ RATE_LIMIT_WINDOW_SECONDS = _safe_int_env("RATE_LIMIT_WINDOW_SECONDS", 60)
 
 _rate_limit_records: Dict[str, Deque[float]] = defaultdict(deque)
 _rate_limit_lock = asyncio.Lock()
+
+SEARCH_MAX_CONCURRENT = _safe_int_env("SEARCH_MAX_CONCURRENT", 5)
+SEARCH_QUEUE_STALE_SECONDS = _safe_int_env("SEARCH_QUEUE_STALE_SECONDS", 180)
+
+_search_queue_lock = asyncio.Lock()
+_search_queue: Deque[str] = deque()
+_search_queue_timestamps: Dict[str, float] = {}
+_search_active_tokens: Dict[str, float] = {}
+_search_inflight = 0
 
 _qdrant = QdrantClient(url=QDRANT_URL)
 _model = SentenceTransformer(EMBED_MODEL_NAME)
@@ -461,29 +553,113 @@ async def event_stream(user_description: str, max_display_results: int):
         yield format_sse("error", {"message": str(e)})
 
 
+async def search_stream_with_release(
+    user_description: str, max_display_results: int, queue_token: Optional[str]
+):
+    try:
+        async for chunk in event_stream(user_description, max_display_results):
+            yield chunk
+    finally:
+        await _release_search_slot(queue_token)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.post("/api/search/enqueue")
+async def enqueue_search(request: Request):
+    payload = await request.json()
+    queue_token = payload.get("queueToken")
+    granted, token, ahead = await _acquire_search_slot(queue_token)
+
+    if granted:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "granted": True,
+                "queueToken": token,
+                "queuePosition": 0,
+                "message": "Slot granted. Starting search.",
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    position = max(ahead, 1)
+    message = (
+        "Please wait. You are next in line."
+        if position == 1
+        else f"Please wait. There are {position} requests ahead of you."
+    )
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={
+            "queued": True,
+            "queueToken": token,
+            "queuePosition": position,
+            "message": message,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @app.post("/api/search")
 async def search_api(request: Request):
     body = await request.json()
+    queue_token = body.get("queueToken")
+    if not queue_token:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "queueToken is required."},
+        )
+
+    if not await _confirm_active_search_token(queue_token):
+        await _release_search_slot(queue_token)
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"error": "Queue token is not active."},
+        )
+
     user_description = body.get("userDescription", "")
     max_display_results = int(body.get("maxDisplayResults", 15))
-    return StreamingResponse(event_stream(user_description, max_display_results), media_type="text/event-stream")
+    response = StreamingResponse(
+        search_stream_with_release(user_description, max_display_results, queue_token),
+        media_type="text/event-stream",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/search")
 # Changed default to 15
-async def search_stream(userDescription: str = "", maxDisplayResults: int = 50):
+async def search_stream(
+    userDescription: str = "",
+    maxDisplayResults: int = 50,
+    queueToken: Optional[str] = Query(None),
+):
     """
     GET-based streaming endpoint for EventSource (used by frontend)
     """
-    return StreamingResponse(
-        event_stream(userDescription, maxDisplayResults),
-        media_type="text/event-stream"
+    if not queueToken:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "queueToken is required."},
+        )
+
+    if not await _confirm_active_search_token(queueToken):
+        await _release_search_slot(queueToken)
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"error": "Queue token is not active."},
+        )
+
+    response = StreamingResponse(
+        search_stream_with_release(userDescription, maxDisplayResults, queueToken),
+        media_type="text/event-stream",
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/export_csv")

@@ -9,8 +9,10 @@ router = APIRouter(prefix="/api/generate-description", tags=["generate"])
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://172.17.0.1:11434/api/generate")
 
+
 class GenerateRequest(BaseModel):
     prompt: str
+
 
 ASYNC_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
 
@@ -56,9 +58,11 @@ Write a professional provisional patent description:
     except Exception as e:
         yield f"\n\n[Error: {e}]"
 
+
 @router.post("")
 async def generate_description(request: GenerateRequest):
     return StreamingResponse(
         generate_stream(request.prompt),
         media_type="text/plain"
     )
+

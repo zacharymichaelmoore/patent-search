@@ -95,6 +95,21 @@
         border: 1px solid gainsboro;
       }
 
+      .queue-status {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-family: sans-serif;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 10px rgba(146, 64, 14, 0.06);
+      }
+
       .watch-demo-button {
         display: inline-flex;
         align-items: center;
@@ -1012,6 +1027,10 @@
       </div>
 
       <div class="grid hidden" id="mainContent">
+        <div id="queueStatusBanner" class="queue-status hidden">
+          <div class="spinner-small" aria-hidden="true"></div>
+          <span id="queueStatusText"></span>
+        </div>
         <!-- Left: Description Editor -->
         <div class="card" id="descriptionCard" style="margin-bottom: 3rem">
           <h2 class="card-title">Description</h2>
@@ -1427,6 +1446,47 @@
         initialValue: descriptionTextarea ? descriptionTextarea.value : "",
       });
       let isGeneratingDescription = false;
+      let searchQueueToken = null;
+
+      const queueStatusBanner = document.getElementById("queueStatusBanner");
+      const queueStatusText = document.getElementById("queueStatusText");
+
+      function showQueueStatus(position) {
+        if (!queueStatusBanner || !queueStatusText) return;
+        const count =
+          typeof position === "number" && Number.isFinite(position)
+            ? Math.max(0, Math.floor(position))
+            : null;
+        let message;
+        if (count === null) {
+          message = "Please wait. Your search request is in the queue.";
+        } else if (count <= 0) {
+          message = "Please wait. Preparing to start your search.";
+        } else if (count === 1) {
+          message = "Please wait. There is 1 search ahead of you.";
+        } else {
+          message = `Please wait. There are ${count} searches ahead of you.`;
+        }
+        queueStatusText.textContent = message;
+        queueStatusBanner.classList.remove("hidden");
+      }
+
+      function hideQueueStatus() {
+        if (!queueStatusBanner || !queueStatusText) return;
+        queueStatusText.textContent = "";
+        queueStatusBanner.classList.add("hidden");
+      }
+
+      function waitForQueueDelay(position) {
+        const base = 2000;
+        const perItem = 1000;
+        const extra =
+          typeof position === "number" && Number.isFinite(position)
+            ? Math.max(0, position) * perItem
+            : 0;
+        const waitMs = Math.min(12000, base + extra);
+        return new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
 
       let adjustHeightFrame = null;
       function adjustEditorHeight() {
@@ -1626,6 +1686,10 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt }),
           });
+
+          if (!response.ok || !response.body) {
+            throw new Error(`Failed with status ${response.status}`);
+          }
 
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
@@ -2348,13 +2412,100 @@
         let hasClearedPlaceholder = false;
         let hasCompleted = false;
 
+        let queueToken = searchQueueToken;
+        try {
+          while (true) {
+            let response;
+            try {
+              response = await fetch(`${API_BASE}/api/search/enqueue`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userDescription: searchQuery,
+                  maxDisplayResults,
+                  queueToken,
+                }),
+              });
+            } catch (err) {
+              throw new Error("Unable to contact the search queue.");
+            }
+
+            if (response.status === 429) {
+              let data = null;
+              try {
+                data = await response.json();
+              } catch (parseErr) {
+                console.warn("Unable to parse queue response:", parseErr);
+              }
+              const position =
+                data && typeof data.queuePosition === "number"
+                  ? data.queuePosition
+                  : null;
+              if (data && typeof data.queueToken === "string") {
+                queueToken = data.queueToken;
+                searchQueueToken = data.queueToken;
+              }
+              showQueueStatus(position);
+              await waitForQueueDelay(position);
+              continue;
+            }
+
+            if (!response.ok) {
+              throw new Error(`Queue request failed (status ${response.status}).`);
+            }
+
+            let data = null;
+            try {
+              data = await response.json();
+            } catch {
+              data = null;
+            }
+            if (data && typeof data.queueToken === "string") {
+              queueToken = data.queueToken;
+            }
+            searchQueueToken = queueToken || null;
+            hideQueueStatus();
+            break;
+          }
+        } catch (err) {
+          console.error("Failed to reserve search slot:", err);
+          hideQueueStatus();
+          hideSearchProgress();
+          restoreSearchButton(searchButton);
+          searchStatusMessage.textContent =
+            "Unable to start the search right now. Please try again in a moment.";
+          searchStatusMessage.classList.remove("hidden");
+          resultsContainer.innerHTML =
+            '<div class="empty-state">Unable to start search. Please try again shortly.</div>';
+          return;
+        }
+
         const params = new URLSearchParams({
           userDescription: searchQuery,
           maxDisplayResults: String(maxDisplayResults),
         });
+        if (queueToken) {
+          params.set("queueToken", queueToken);
+        }
+        if (!queueToken) {
+          console.error("Queue token missing after slot allocation.");
+          hideQueueStatus();
+          hideSearchProgress();
+          searchQueueToken = null;
+          searchStatusMessage.textContent =
+            "Unable to start the search right now. Please try again in a moment.";
+          searchStatusMessage.classList.remove("hidden");
+          restoreSearchButton(searchButton);
+          resultsContainer.innerHTML =
+            '<div class="empty-state">Unable to start search. Please try again shortly.</div>';
+          return;
+        }
 
         const searchUrl = `${API_BASE}/api/search?${params.toString()}`;
         eventSource = new EventSource(searchUrl);
+        eventSource.onopen = () => {
+          hideQueueStatus();
+        };
 
         eventSource.addEventListener("log", (event) => {
           try {
@@ -2450,6 +2601,8 @@
             eventSource.close();
             eventSource = null;
           }
+          searchQueueToken = null;
+          hideQueueStatus();
         });
 
         eventSource.onerror = (event) => {
@@ -2482,6 +2635,8 @@
             eventSource.close();
             eventSource = null;
           }
+          searchQueueToken = null;
+          hideQueueStatus();
         };
       }
 
