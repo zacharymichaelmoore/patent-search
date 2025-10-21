@@ -2521,11 +2521,6 @@
           ? numericScore
           : numericScore.toFixed(2);
 
-        const scoreDisplay =
-          numericScore !== null && numericScore !== undefined
-            ? `<span class="score-badge ${scoreClass}">${displayScore}</span>`
-            : "";
-
         const MAX_TITLE_LENGTH = 58;
         const title = result.title || "Untitled Patent";
         const displayTitle =
@@ -2533,28 +2528,77 @@
             ? `${title.slice(0, MAX_TITLE_LENGTH)}…`
             : title;
 
-        const resultHTML = `
-    <div class="result-item">
-      <div class="result-title">
-        ${displayTitle}
-      </div>
-      <div style="margin-top: 0.5rem; margin-bottom: 0.5rem">
-      ${scoreDisplay}
-      </div>
-      <div class="result-abstract" style="margin-bottom: 0.75rem;">
-        ${result.preview || result.abstract || "No abstract available"}
-      </div>
-      <div class="result-meta" style="margin-bottom: 0.5rem;">
-        <span>${result.patentNumber} • ${result.filingDate}</span>
-      </div>
-      ${
-        result.googlePatentUrl
-          ? `<a href="${result.googlePatentUrl}" target="_blank" class="result-link">View patent</a>`
-          : ""
-      }
-    </div>
-  `;
-        resultsContainer.insertAdjacentHTML("beforeend", resultHTML);
+        const resultItem = document.createElement("div");
+        resultItem.className = "result-item";
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "result-title";
+        titleEl.textContent = displayTitle;
+        resultItem.appendChild(titleEl);
+
+        if (numericScore !== null && numericScore !== undefined) {
+          const scoreWrapper = document.createElement("div");
+          scoreWrapper.style.marginTop = "0.5rem";
+          scoreWrapper.style.marginBottom = "0.5rem";
+
+          const scoreBadge = document.createElement("span");
+          scoreBadge.className = `score-badge ${scoreClass}`;
+          scoreBadge.textContent = displayScore;
+
+          scoreWrapper.appendChild(scoreBadge);
+          resultItem.appendChild(scoreWrapper);
+        }
+
+        const abstractEl = document.createElement("div");
+        abstractEl.className = "result-abstract";
+        abstractEl.style.marginBottom = "0.75rem";
+        abstractEl.textContent =
+          result.preview || result.abstract || "No abstract available";
+        resultItem.appendChild(abstractEl);
+
+        const metaParts = [];
+        const patentNumber =
+          typeof result.patentNumber === "string"
+            ? result.patentNumber
+            : result.patentNumber != null
+            ? String(result.patentNumber)
+            : "";
+        const filingDate =
+          typeof result.filingDate === "string"
+            ? result.filingDate
+            : result.filingDate != null
+            ? String(result.filingDate)
+            : "";
+
+        if (patentNumber) metaParts.push(patentNumber);
+        if (filingDate) metaParts.push(filingDate);
+
+        if (metaParts.length > 0) {
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "result-meta";
+          metaDiv.style.marginBottom = "0.5rem";
+
+          const metaSpan = document.createElement("span");
+          metaSpan.textContent = metaParts.join(" • ");
+          metaDiv.appendChild(metaSpan);
+          resultItem.appendChild(metaDiv);
+        }
+
+        const patentUrl =
+          typeof result.googlePatentUrl === "string"
+            ? result.googlePatentUrl.trim()
+            : "";
+        if (/^https?:\/\//i.test(patentUrl)) {
+          const link = document.createElement("a");
+          link.href = patentUrl;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.className = "result-link";
+          link.textContent = "View patent";
+          resultItem.appendChild(link);
+        }
+
+        resultsContainer.appendChild(resultItem);
         return true;
       }
       function downloadCSV() {
