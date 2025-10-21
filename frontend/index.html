@@ -100,14 +100,16 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        background: #fef3c7;
-        border: 1px solid #f59e0b;
-        color: #92400e;
-        border-radius: 0.5rem;
+        background: white;
+        border: 1px solid gainsboro;
+        color: black;
+        border-radius: 0.25rem;
         padding: 0.75rem 1rem;
         font-family: sans-serif;
         font-size: 0.9rem;
-        box-shadow: 0 4px 10px rgba(146, 64, 14, 0.06);
+        width: 24rem;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       .watch-demo-button {
@@ -2451,7 +2453,9 @@
             }
 
             if (!response.ok) {
-              throw new Error(`Queue request failed (status ${response.status}).`);
+              throw new Error(
+                `Queue request failed (status ${response.status}).`
+              );
             }
 
             let data = null;

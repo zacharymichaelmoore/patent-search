@@ -115,7 +115,7 @@ as opposed to the `docker-compose.dev.yml` which is for local development.
 Swagger UI at `http://<host>/docs`
 ReDoc at `http://<host>/redoc`
 
-## Local Development (backend runs locally, heavy compute stays on VM)
+## Local Development
 
 1. **Copy the embedding model once**  
    ```bash
@@ -133,7 +133,7 @@ ReDoc at `http://<host>/redoc`
    ```
    Leave this terminal open for the entire session.
 
-3. **Start the backend locally**  
+3. **Start the backend**  
    ```bash
    cd /Users/zacharymoore/Documents/GitHub/patent-search
    source .venv/bin/activate
@@ -160,4 +160,4 @@ ReDoc at `http://<host>/redoc`
    - Stop Uvicorn (`Ctrl+C`).  
    - Close the tunnel session.  
 
-> Tip: swap `python3 -m http.server` with a watcher such as `live-server` or Vite for auto refresh.
+> Tip: swap `python3 -m http.server` with a watcher such as `live-server`.
