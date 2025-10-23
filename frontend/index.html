@@ -217,6 +217,8 @@
         opacity: 1;
         transform: none;
         transition: opacity 0.4s ease, transform 0.4s ease, padding 0.4s ease;
+        position: relative;
+        z-index: 0;
       }
 
       main.app-visible {
@@ -889,9 +891,136 @@
           background-position: 200%;
         }
       }
+
+      .landing-nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        width: 100%;
+        padding: 1rem 2.5rem 1rem;
+        background: rgb(245 245 245 / 17%);
+        backdrop-filter: blur(18px);
+      }
+
+      .landing-nav__inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .landing-nav__left {
+        display: flex;
+        align-items: center;
+        gap: 1.75rem;
+      }
+
+      .landing-nav__logo {
+        width: 140px;
+        height: auto;
+      }
+
+      .landing-nav__links {
+        display: flex;
+        gap: 1.25rem;
+        margin-top: 0.25rem;
+      }
+
+      .landing-nav__links a {
+        font-family: sans-serif;
+        font-size: 0.95rem;
+        color: #111827;
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      .landing-nav__links a:hover {
+        color: #4338ca;
+      }
+
+      .landing-nav__count {
+        font-family: sans-serif;
+        font-size: 0.9rem;
+        color: #111827;
+        padding: 0.6rem 1.25rem;
+        border-radius: 999px;
+        background: #ededed;
+        border: 1px solid rgba(209, 213, 219, 0.8);
+        white-space: nowrap;
+        align-self: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 214px;
+        min-height: 44px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .landing-nav__count.loading {
+        color: transparent;
+      }
+
+      .landing-nav__count.loading::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(
+          120deg,
+          rgba(229, 231, 235, 0.8) 0%,
+          rgba(245, 247, 250, 1) 40%,
+          rgba(229, 231, 235, 0.8) 80%
+        );
+        animation: loaderSweep 1.3s ease-in-out infinite;
+      }
+
+      .landing-nav__count-content {
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        position: relative;
+        z-index: 1;
+        color: #111827;
+      }
+
+      .landing-nav__count-content.is-visible {
+        opacity: 1;
+      }
+
+      @keyframes loaderSweep {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
     </style>
   </head>
   <body>
+    <nav class="landing-nav">
+      <div class="landing-nav__inner">
+        <div class="landing-nav__left">
+          <img
+            src="{{ url_for('static', path='patty-logo.svg') }}"
+            alt="Patty"
+            class="landing-nav__logo"
+          />
+          <div class="landing-nav__links">
+            <a href="#search">Search Patents</a>
+            <a href="#discover">Discover Inventions</a>
+            <a href="#faq">FAQ</a>
+          </div>
+        </div>
+        <div class="landing-nav__count loading" id="indexedCountBadge">
+          <span class="landing-nav__count-content" id="indexedCountText">
+            Patents Indexed
+          </span>
+        </div>
+      </div>
+    </nav>
     <header>
       <div class="header-content">
         <div style="display: none">
@@ -907,11 +1036,17 @@
       <div
         class="initial-center"
         id="initialPromptWrapper"
-        style="display: flex; flex-direction: column; margin-top: 3rem"
+        style="display: flex; flex-direction: column;"
       >
         <div class="card" style="margin-bottom: 5rem">
           <div class="landing-header-text" id="landingHeaderText">
-            <div style="display: flex; align-items: center; justify-content: center;">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
               <h1>Find patents</h1>
               <img
                 src="{{ url_for('static', path='patty-logo.svg') }}"
@@ -987,7 +1122,9 @@
                 aria-haspopup="dialog"
               >
                 <span class="play-icon" aria-hidden="true"></span>
-                <span style="text-decoration: underline;">Watch how it works (1:25)</span>
+                <span style="text-decoration: underline"
+                  >Watch how it works (1:25)</span
+                >
               </button>
             </div>
           </div>
@@ -1397,6 +1534,15 @@
       const mainContent = document.getElementById("mainContent");
       const header = document.querySelector("header");
       const main = document.querySelector("main");
+      // const landingBackdrop = document.getElementById("landingBackdrop");
+      const indexedCountBadge = document.getElementById("indexedCountBadge");
+      const indexedCountText = document.getElementById("indexedCountText");
+      const INDEX_COUNT_OFFSET = 6;
+      let indexedCountAnimationFrame = null;
+      if (indexedCountBadge) {
+        indexedCountBadge.dataset.countValue = "0";
+        indexedCountBadge.classList.add("loading");
+      }
       let hasUnlockedInterface = false;
       const renderedTermNodes = {
         device: new Map(),
@@ -1591,6 +1737,13 @@
             landingInfoRow.setAttribute("aria-hidden", "true");
           }
 
+          // if (landingBackdrop) {
+          //   landingBackdrop.classList.add("is-hidden");
+          //   setTimeout(() => {
+          //     landingBackdrop.style.display = "none";
+          //   }, 600);
+          // }
+
           if (initialPromptWrapper) {
             initialPromptWrapper.classList.add("hidden");
             initialPromptWrapper.style.display = "none";
@@ -1637,23 +1790,106 @@
       }
 
       async function fetchTotalPatents() {
+        showIndexedCountLoading();
         try {
           const res = await fetch(`${API_BASE}/api/stats`);
           if (!res.ok) throw new Error(`Status ${res.status}`);
           const data = await res.json();
           const total = data?.totalPatents;
+          let numericTotal = null;
           if (typeof total === "number" && Number.isFinite(total)) {
-            totalPatentsDisplay = total.toLocaleString();
+            numericTotal = total;
           } else if (typeof total === "string" && total.trim() !== "") {
             const parsed = Number.parseInt(total.replace(/,/g, ""), 10);
             if (!Number.isNaN(parsed)) {
-              totalPatentsDisplay = parsed.toLocaleString();
+              numericTotal = parsed;
             }
+          }
+
+          if (numericTotal !== null) {
+            totalPatentsDisplay = numericTotal.toLocaleString();
+            animateIndexedCount(numericTotal);
+          } else {
+            totalPatentsDisplay = null;
+            resetIndexedCountBadge();
           }
         } catch (err) {
           console.warn("Failed to fetch total patent count:", err);
           totalPatentsDisplay = null;
+          resetIndexedCountBadge();
         }
+      }
+
+      function showIndexedCountLoading() {
+        if (indexedCountAnimationFrame) {
+          cancelAnimationFrame(indexedCountAnimationFrame);
+          indexedCountAnimationFrame = null;
+        }
+        if (indexedCountBadge) {
+          indexedCountBadge.classList.add("loading");
+          indexedCountBadge.dataset.countValue = "0";
+        }
+        if (indexedCountText) {
+          indexedCountText.classList.remove("is-visible");
+          indexedCountText.textContent = "Patents Indexed";
+        }
+      }
+
+      function resetIndexedCountBadge() {
+        showIndexedCountLoading();
+      }
+
+      function animateIndexedCount(targetValue) {
+        if (!indexedCountBadge || !indexedCountText) return;
+        const previousValueRaw = Number.parseInt(
+          indexedCountBadge.dataset.countValue || "0",
+          10
+        );
+        const defaultStart = Math.max(targetValue - INDEX_COUNT_OFFSET, 0);
+        let startValue = Number.isFinite(previousValueRaw)
+          ? previousValueRaw
+          : defaultStart;
+        startValue = Math.min(
+          targetValue,
+          Math.max(startValue, defaultStart)
+        );
+
+        if (indexedCountAnimationFrame) {
+          cancelAnimationFrame(indexedCountAnimationFrame);
+        }
+
+        if (startValue === targetValue) {
+          indexedCountBadge.dataset.countValue = String(targetValue);
+          indexedCountBadge.classList.remove("loading");
+          indexedCountText.classList.add("is-visible");
+          indexedCountText.textContent = `${targetValue.toLocaleString()} Patents Indexed`;
+          return;
+        }
+
+        indexedCountBadge.dataset.countValue = String(startValue);
+        indexedCountBadge.classList.remove("loading");
+        indexedCountText.classList.add("is-visible");
+        indexedCountText.textContent = `${startValue.toLocaleString()} Patents Indexed`;
+
+        const duration = 1300;
+        const startTime = performance.now();
+
+        const step = (now) => {
+          const elapsed = Math.min((now - startTime) / duration, 1);
+          const eased = 1 - Math.pow(1 - elapsed, 3);
+          const current = Math.round(
+            startValue + (targetValue - startValue) * eased
+          );
+          indexedCountText.textContent = `${current.toLocaleString()} Patents Indexed`;
+          indexedCountBadge.dataset.countValue = String(current);
+          if (elapsed < 1) {
+            indexedCountAnimationFrame = requestAnimationFrame(step);
+          } else {
+            indexedCountAnimationFrame = null;
+          }
+        };
+
+        indexedCountAnimationFrame = requestAnimationFrame(step);
       }
 
       async function generateDescription() {
@@ -2775,7 +3011,11 @@
           }
         });
 
-      fetchTotalPatents();
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fetchTotalPatents);
+      } else {
+        fetchTotalPatents();
+      }
     </script>
   </body>
 </html>
