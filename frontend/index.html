@@ -1564,6 +1564,7 @@
       let popoverTimeout = null;
       let lastSearchQuery = "";
       let lastTopK = 100;
+      let hasUnlockedInterface = false;
 
       const watchDemoButton = document.getElementById("watchDemoButton");
       const videoModal = document.getElementById("videoModal");
@@ -1571,34 +1572,6 @@
       const closeVideoModalButton = document.getElementById(
         "closeVideoModalButton"
       );
-
-      const landingNav = document.querySelector(".landing-nav");
-      const navAnchorLinks = document.querySelectorAll(
-        ".landing-nav__links a[href^='#']"
-      );
-
-      navAnchorLinks.forEach((link) => {
-        link.addEventListener("click", (event) => {
-          const targetSelector = link.getAttribute("href");
-          if (!targetSelector) {
-            return;
-          }
-          const targetElement = document.querySelector(targetSelector);
-          if (!targetElement) {
-            return;
-          }
-          event.preventDefault();
-          const navHeight = landingNav ? landingNav.offsetHeight : 0;
-          const additionalOffset = 16;
-          const targetPosition =
-            targetElement.getBoundingClientRect().top + window.pageYOffset;
-          const scrollTarget = Math.max(
-            targetPosition - navHeight - additionalOffset,
-            0
-          );
-          window.scrollTo({ top: scrollTarget, behavior: "smooth" });
-        });
-      });
 
       function openVideoModal() {
         if (!videoModal || !demoVideo) return;
@@ -1692,7 +1665,6 @@
         indexedCountBadge.dataset.countValue = "0";
         indexedCountBadge.classList.add("loading");
       }
-      let hasUnlockedInterface = false;
       const renderedTermNodes = {
         device: new Map(),
         subject: new Map(),
@@ -1720,6 +1692,101 @@
       if (showResultsButton) {
         showResultsButton.dataset.available = "false";
       }
+
+      const landingNav = document.querySelector(".landing-nav");
+      const navAnchorLinks = document.querySelectorAll(
+        ".landing-nav__links a[href^='#']"
+      );
+
+      function scrollToSelectorWithOffset(selector) {
+        const targetElement = document.querySelector(selector);
+        if (!targetElement) {
+          return;
+        }
+        const navHeight = landingNav ? landingNav.offsetHeight : 0;
+        const additionalOffset = 16;
+        const targetPosition =
+          targetElement.getBoundingClientRect().top + window.pageYOffset;
+        const scrollTarget = Math.max(
+          targetPosition - navHeight - additionalOffset,
+          0
+        );
+        window.scrollTo({ top: scrollTarget, behavior: "smooth" });
+      }
+
+      function restoreLandingView(afterRestore) {
+        const runAfterFrame = () => {
+          if (typeof afterRestore === "function") {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(afterRestore);
+            });
+          }
+        };
+
+        if (!hasUnlockedInterface) {
+          runAfterFrame();
+          return;
+        }
+
+        if (header) {
+          header.classList.remove("content-visible");
+        }
+        if (main) {
+          main.classList.remove("app-visible");
+        }
+        if (landingContentWrapper) {
+          landingContentWrapper.classList.remove("hidden", "fade-out");
+          landingContentWrapper.style.removeProperty("display");
+          landingContentWrapper.style.display = "flex";
+          landingContentWrapper.style.flexDirection = "column";
+        }
+        if (discoverSection) {
+          discoverSection.classList.remove("hidden", "fade-out");
+        }
+        if (mainContent) {
+          mainContent.classList.add("hidden");
+          mainContent.classList.remove("fade-in");
+        }
+        if (descriptionSection) {
+          descriptionSection.classList.add("hidden");
+        }
+        if (postGenerateColumn) {
+          postGenerateColumn.classList.add("hidden");
+        }
+
+        hasUnlockedInterface = false;
+        runAfterFrame();
+      }
+
+      navAnchorLinks.forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const targetSelector = link.getAttribute("href");
+          if (!targetSelector || !targetSelector.startsWith("#")) {
+            return;
+          }
+
+          const targetElement = document.querySelector(targetSelector);
+          if (!targetElement) {
+            return;
+          }
+
+          event.preventDefault();
+
+          const isLandingTarget =
+            (landingContentWrapper &&
+              landingContentWrapper.contains(targetElement)) ||
+            (discoverSection && discoverSection.contains(targetElement));
+
+          if (isLandingTarget) {
+            restoreLandingView(() =>
+              scrollToSelectorWithOffset(targetSelector)
+            );
+            return;
+          }
+
+          scrollToSelectorWithOffset(targetSelector);
+        });
+      });
 
       const INVENTION_IMAGE_FALLBACK =
         "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='18'%3ENo Image%3C/text%3E%3C/svg%3E";
