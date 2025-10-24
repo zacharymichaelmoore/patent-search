@@ -15,6 +15,10 @@
         box-sizing: border-box;
       }
 
+      html {
+        scroll-behavior: smooth;
+      }
+
       body {
         font-family: Georgia;
         background: whitesmoke;
@@ -1567,6 +1571,34 @@
       const closeVideoModalButton = document.getElementById(
         "closeVideoModalButton"
       );
+
+      const landingNav = document.querySelector(".landing-nav");
+      const navAnchorLinks = document.querySelectorAll(
+        ".landing-nav__links a[href^='#']"
+      );
+
+      navAnchorLinks.forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const targetSelector = link.getAttribute("href");
+          if (!targetSelector) {
+            return;
+          }
+          const targetElement = document.querySelector(targetSelector);
+          if (!targetElement) {
+            return;
+          }
+          event.preventDefault();
+          const navHeight = landingNav ? landingNav.offsetHeight : 0;
+          const additionalOffset = 16;
+          const targetPosition =
+            targetElement.getBoundingClientRect().top + window.pageYOffset;
+          const scrollTarget = Math.max(
+            targetPosition - navHeight - additionalOffset,
+            0
+          );
+          window.scrollTo({ top: scrollTarget, behavior: "smooth" });
+        });
+      });
 
       function openVideoModal() {
         if (!videoModal || !demoVideo) return;
