@@ -1807,6 +1807,7 @@
           cta.type = "button";
           cta.className = "invention-action";
           cta.textContent = "Discover Patents";
+          cta.addEventListener("click", () => startDiscoverSearch(item.title));
           overlay.appendChild(cta);
 
           card.appendChild(image);
@@ -1822,6 +1823,17 @@
         });
 
         inventionGrid.appendChild(fragment);
+      }
+
+      function startDiscoverSearch(title) {
+        if (typeof title !== "string" || title.trim() === "") {
+          return;
+        }
+        const promptInput = document.getElementById("promptInput");
+        if (promptInput) {
+          promptInput.value = title;
+        }
+        generateDescription();
       }
 
       function initializeDiscoverSection() {
@@ -2129,7 +2141,8 @@
       }
 
       async function generateDescription() {
-        const prompt = document.getElementById("promptInput").value.trim();
+        const promptInput = document.getElementById("promptInput");
+        const prompt = promptInput ? promptInput.value.trim() : "";
         const btn = document.getElementById("generateBtn");
 
         if (!prompt) {
