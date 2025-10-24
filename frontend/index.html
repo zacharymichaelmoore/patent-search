@@ -16,7 +16,7 @@
       }
 
       body {
-        font-family: auto;
+        font-family: Georgia;
         background: whitesmoke;
         color: #111827;
         line-height: 1.6;
@@ -226,11 +226,11 @@
       }
 
       .initial-center {
-        min-height: calc(100vh - 4rem);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 2rem;
+        padding-top: 4rem;
+        transition: opacity 0.4s ease, transform 0.4s ease;
       }
 
       .initial-center .card {
@@ -242,7 +242,6 @@
         opacity: 0 !important;
         transform: translateY(-20px);
         pointer-events: none;
-        transition: opacity 0.4s ease, transform 0.4s ease;
       }
 
       .fade-in {
@@ -274,7 +273,6 @@
 
       .card {
         border-radius: 0.25rem;
-        padding: 2rem 0rem;
       }
 
       .card-premium {
@@ -316,6 +314,7 @@
       }
 
       .landing-header-text h1 {
+        font-family: Georgia, 'Times New Roman', Times, serif;
         font-size: 2.75rem;
         font-weight: 700;
       }
@@ -780,6 +779,7 @@
       }
 
       .score-badge {
+        font-family: monospace;
         display: inline-block;
         padding: 0.25rem 0.5rem;
         border-radius: 0.25rem;
@@ -897,8 +897,8 @@
         top: 0;
         z-index: 20;
         width: 100%;
-        padding: 1rem 2.5rem 1rem;
-        background: rgb(245 245 245 / 17%);
+        padding: 0.5rem 1.5rem;
+        background: rgb(245 245 245 / 83%);
         backdrop-filter: blur(18px);
       }
 
@@ -918,7 +918,7 @@
       }
 
       .landing-nav__logo {
-        width: 140px;
+        width: 110px;
         height: auto;
       }
 
@@ -929,11 +929,12 @@
       }
 
       .landing-nav__links a {
-        font-family: sans-serif;
-        font-size: 0.95rem;
-        color: #111827;
+        font-family: Georgia;
+        font-size: 0.85rem;
+        color: #333333;
         text-decoration: none;
         transition: color 0.2s ease;
+        padding-top: 4px;
       }
 
       .landing-nav__links a:hover {
@@ -941,20 +942,20 @@
       }
 
       .landing-nav__count {
-        font-family: sans-serif;
-        font-size: 0.9rem;
-        color: #111827;
+        margin-top: 8px;
+        font-family: monospace;
+        font-size: 0.77rem;
+        color: #333333;
         padding: 0.6rem 1.25rem;
-        border-radius: 999px;
-        background: #ededed;
-        border: 1px solid rgba(209, 213, 219, 0.8);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
         white-space: nowrap;
         align-self: center;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         min-width: 214px;
-        min-height: 44px;
+        min-height: 38px;
         position: relative;
         overflow: hidden;
       }
@@ -997,6 +998,154 @@
           transform: translateX(100%);
         }
       }
+
+      .discover-section {
+        max-width: 1400px;
+        border: 1px solid #e9e9e9;
+        border-radius: 2rem;
+        padding: 2rem 40px;
+        margin: 2rem;
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+
+      .discover-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .discover-title {
+        font-size: 2.0rem;
+        font-family: Georgia, 'Times New Roman', Times, serif;
+        font-weight: 600;
+        color: #333333;
+      }
+
+      .discover-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .discover-tab {
+        padding: 7px 10px;
+        border-radius: 6px;
+        background-color: whitesmoke;
+        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15);
+        color: #333333;
+        font-weight: 600;
+        font-family: sans-serif;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .discover-tab.is-active {
+        background: #E9E9E9;
+        color: #333333;
+        box-shadow: 0px 0px 0px rgba(0, 0, 0, 0);
+      }
+
+      .invention-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1.75rem;
+      }
+
+      @media (max-width: 1200px) {
+        .invention-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 900px) {
+        .invention-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 600px) {
+        .discover-section {
+          padding: 2.25rem 1.75rem;
+        }
+        .invention-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .invention-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .invention-card {
+        position: relative;
+        border-radius: 11px;
+        border: 1px solid #e9e9e9;
+        overflow: hidden;
+        aspect-ratio: 1 / 1;
+        display: flex;
+      }
+
+      .invention-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .invention-label {
+        font-family: Georgia, 'Times New Roman', Times, serif;
+        font-size: 0.97rem;
+        color: #333333;
+        line-height: 1.4;
+        padding: 0.5rem;
+      }
+
+      .invention-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.358);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.1s ease-in;
+        pointer-events: none;
+      }
+
+      .invention-card:hover .invention-overlay {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .invention-action {
+        padding: 7px 10px;
+        background: #F5F5F5;
+        color: #333333;
+        border-radius: 6px;
+        font-family: sans-serif;
+        font-size: 0.90rem;
+        font-weight: 600;
+        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.08);
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        pointer-events: auto;
+      }
+
+      .invention-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+        border: 1px dashed #d1d5db;
+        border-radius: 1.25rem;
+        font-family: sans-serif;
+        font-size: 1rem;
+        color: #6b7280;
+        background: rgba(255, 255, 255, 0.65);
+      }
     </style>
   </head>
   <body>
@@ -1035,10 +1184,10 @@
     <main>
       <div
         class="initial-center"
-        id="initialPromptWrapper"
+        id="landingContentWrapper"
         style="display: flex; flex-direction: column;"
       >
-        <div class="card" style="margin-bottom: 5rem">
+        <div class="card" style="margin-bottom: 2rem; padding-top: 0rem;">
           <div class="landing-header-text" id="landingHeaderText">
             <div
               style="
@@ -1051,7 +1200,7 @@
               <img
                 src="{{ url_for('static', path='patty-logo.svg') }}"
                 width="200px"
-                style="padding-bottom: 4px"
+                style="padding-bottom: 5px"
               />
             </div>
             <p class="subtitle">
@@ -1129,41 +1278,43 @@
             </div>
           </div>
         </div>
-        <div
-          id="landingInfoRow"
-          style="width: 100%; display: flex; justify-content: center"
-        >
-          <div
-            style="
-              display: flex;
-              width: 80%;
-              justify-content: space-around;
-              margin-top: 3rem;
-              align-items: center;
-              margin-right: 2rem;
-              margin-left: 2rem;
-            "
-          >
-            <div style="width: 300px; color: black; align-self: normal">
-              <p>
-                Only key search terms are sent to the server, description is not
-                stored on our server and no logs are kept.
-              </p>
-            </div>
-            <div style="color: gainsboro">•</div>
-            <div style="width: 300px; color: black; align-self: normal">
-              <p>
-                No external api calls are made to other 3rd party services, all
-                analysis is a proprietary and internal engine.
-              </p>
-            </div>
-            <div style="color: gainsboro">•</div>
-            <div style="width: 300px; color: black; align-self: normal">
-              <p>Full index of patents from 2010 - Present from the USPTO.</p>
-            </div>
+      </div>
+      <section class="discover-section" id="discover">
+        <div class="discover-header">
+          <h2 class="discover-title">Discover Inventions</h2>
+          <div class="discover-tabs" role="tablist">
+            <button
+              type="button"
+              class="discover-tab is-active"
+              data-category="featured"
+            >
+              Featured
+            </button>
+            <button
+              type="button"
+              class="discover-tab"
+              data-category="smart-home"
+            >
+              Smart Home
+            </button>
+            <button
+              type="button"
+              class="discover-tab"
+              data-category="automotive"
+            >
+              Automotive
+            </button>
+            <button
+              type="button"
+              class="discover-tab"
+              data-category="manufacturing"
+            >
+              Manufacturing
+            </button>
           </div>
         </div>
-      </div>
+        <div class="invention-grid" id="inventionGrid"></div>
+      </section>
 
       <div class="grid hidden" id="mainContent">
         <div id="queueStatusBanner" class="queue-status hidden">
@@ -1316,37 +1467,6 @@
               Show results
             </button>
           </div>
-
-          <!-- Premium Upgrade Card -->
-          <!-- <div class="card card-premium">
-          <div class="premium-icon">🚀</div>
-          <h2 class="card-title" style="color: white; justify-content: center;">
-            Unlock Detailed Analysis
-          </h2>
-          
-          <div class="premium-price">
-            $19.99
-            <small>one-time</small>
-          </div>
-
-          <ul class="premium-features">
-            <li><strong>AI-Powered Risk Scoring</strong> - Each patent analyzed with similarity scores (0-100)</li>
-            <li><strong>Risk Level Classification</strong> - Low/Medium/High/Critical ratings for quick triage</li>
-            <li><strong>Expert Reasoning</strong> - AI explains WHY each patent is relevant to your invention</li>
-            <li><strong>Unlimited Results</strong> - Search up to 2,000 patents (vs 10 free)</li>
-            <li><strong>Detailed CSV Export</strong> - Download comprehensive report with all analysis</li>
-            <li><strong>Google Patents Links</strong> - Direct links to full patent documents</li>
-            <li><strong>Priority Support</strong> - Get help from our patent search experts</li>
-          </ul>
-
-          <button class="btn-premium btn-large" onclick="unlockPremium()">
-            🔓 Unlock Full Analysis - $19.99
-          </button>
-
-          <p style="text-align: center; margin-top: 1rem; font-size: 0.75rem; opacity: 0.9;">
-            Secure payment via Stripe • Instant access • No subscription
-          </p>
-        </div> -->
         </div>
       </div>
       <button
@@ -1524,17 +1644,14 @@
       const MIN_EDITOR_HEIGHT = 320;
       const descriptionSection = document.getElementById("descriptionSection");
       const postGenerateColumn = document.getElementById("postGenerateColumn");
-      const landingHeaderText = document.getElementById("landingHeaderText");
-      const initialPromptWrapper = document.getElementById(
-        "initialPromptWrapper"
+      const landingContentWrapper = document.getElementById(
+        "landingContentWrapper"
       );
-      const landingInfoRow = document.getElementById("landingInfoRow");
+      const discoverSection = document.getElementById("discover");
       const descriptionCard = document.getElementById("descriptionCard");
-      const promptSection = document.getElementById("promptSection");
       const mainContent = document.getElementById("mainContent");
       const header = document.querySelector("header");
       const main = document.querySelector("main");
-      // const landingBackdrop = document.getElementById("landingBackdrop");
       const indexedCountBadge = document.getElementById("indexedCountBadge");
       const indexedCountText = document.getElementById("indexedCountText");
       const INDEX_COUNT_OFFSET = 6;
@@ -1570,6 +1687,154 @@
       }
       if (showResultsButton) {
         showResultsButton.dataset.available = "false";
+      }
+
+      const INVENTION_IMAGE_FALLBACK =
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='18'%3ENo Image%3C/text%3E%3C/svg%3E";
+
+      const INVENTIONS = [
+        {
+          slug: "smart-water-bottle",
+          title: "Smart Water Bottle",
+          categories: ["featured", "smart-home"],
+          image:
+            "{{ url_for('static', path='discover/smart-water-bottle.png') }}",
+        },
+        {
+          slug: "smart-toaster",
+          title: "Smart Toaster",
+          categories: ["featured", "smart-home", "manufacturing"],
+          image: "{{ url_for('static', path='discover/smart-toaster.png') }}",
+        },
+        {
+          slug: "smart-thermostat",
+          title: "Smart Thermostat Hub",
+          categories: ["featured", "smart-home"],
+          image:
+            "{{ url_for('static', path='discover/smart-thermostat.png') }}",
+        },
+        {
+          slug: "smart-refrigerator",
+          title: "Smart Refrigerator with Display",
+          categories: ["featured", "smart-home"],
+          image:
+            "{{ url_for('static', path='discover/smart-refridgerator.png') }}",
+        },
+        {
+          slug: "laundry-machine-screen",
+          title: "Laundry Machine with Interactive Screen",
+          categories: ["smart-home", "manufacturing"],
+          image:
+            "{{ url_for('static', path='discover/laundry-machine-with-screen.png') }}",
+        },
+        {
+          slug: "futuristic-workout-bike",
+          title: "Connected Workout Bike",
+          categories: ["featured", "smart-home"],
+          image:
+            "{{ url_for('static', path='discover/futuristic-workout-bike.png') }}",
+        },
+        {
+          slug: "clothes-folding-robot",
+          title: "Clothes Folding Robot",
+          categories: ["manufacturing"],
+          image:
+            "{{ url_for('static', path='discover/clothes-folding-robot.png') }}",
+        },
+        {
+          slug: "futuristic-bus",
+          title: "Autonomous Transit Bus",
+          categories: ["automotive", "featured"],
+          image:
+            "{{ url_for('static', path='discover/futuristic-bus.png') }}",
+        },
+      ];
+
+      const discoverTabs = document.querySelectorAll(".discover-tab");
+      const inventionGrid = document.getElementById("inventionGrid");
+
+      function setActiveDiscoverTab(targetCategory) {
+        discoverTabs.forEach((tab) => {
+          const isActive =
+            tab.dataset.category === targetCategory ||
+            (!targetCategory && tab.dataset.category === "featured");
+          tab.classList.toggle("is-active", isActive);
+        });
+      }
+
+      function renderInventions(categoryKey = "featured") {
+        if (!inventionGrid) return;
+        inventionGrid.innerHTML = "";
+
+        const normalizedKey = categoryKey || "featured";
+        const items = INVENTIONS.filter((item) => {
+          if (!Array.isArray(item.categories)) return false;
+          return item.categories.includes(normalizedKey);
+        });
+
+        if (items.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "invention-empty";
+          empty.textContent =
+            "No inventions in this category yet. Check back soon.";
+          inventionGrid.appendChild(empty);
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        items.forEach((item) => {
+          const itemWrapper = document.createElement("div");
+          itemWrapper.className = "invention-item";
+          itemWrapper.dataset.slug = item.slug;
+
+          const card = document.createElement("div");
+          card.className = "invention-card";
+
+          const image = document.createElement("img");
+          image.loading = "lazy";
+          image.alt = item.title;
+          image.src = item.image || INVENTION_IMAGE_FALLBACK;
+          image.addEventListener("error", () => {
+            image.onerror = null;
+            image.src = INVENTION_IMAGE_FALLBACK;
+          });
+
+          const overlay = document.createElement("div");
+          overlay.className = "invention-overlay";
+          overlay.setAttribute("aria-hidden", "true");
+
+          const cta = document.createElement("button");
+          cta.type = "button";
+          cta.className = "invention-action";
+          cta.textContent = "Discover Patents";
+          overlay.appendChild(cta);
+
+          card.appendChild(image);
+          card.appendChild(overlay);
+
+          const label = document.createElement("div");
+          label.className = "invention-label";
+          label.textContent = item.title;
+
+          itemWrapper.appendChild(card);
+          itemWrapper.appendChild(label);
+          fragment.appendChild(itemWrapper);
+        });
+
+        inventionGrid.appendChild(fragment);
+      }
+
+      function initializeDiscoverSection() {
+        if (!discoverTabs.length || !inventionGrid) return;
+        discoverTabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const category = tab.dataset.category || "featured";
+            setActiveDiscoverTab(category);
+            renderInventions(category);
+          });
+        });
+        setActiveDiscoverTab("featured");
+        renderInventions("featured");
       }
 
       Object.entries(addTermButtons).forEach(([category, button]) => {
@@ -1698,96 +1963,67 @@
       });
       adjustEditorHeight();
 
-      // TODO: Replace with your actual Stripe checkout URL
       const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/YOUR_CHECKOUT_LINK";
 
       function unlockPremium() {
         window.location.href = STRIPE_CHECKOUT_URL;
       }
 
+      // --- START: CORRECTED FUNCTION ---
       function showFullInterface() {
         if (hasUnlockedInterface) return;
         hasUnlockedInterface = true;
 
+        // Apply global state changes
         if (header) {
-          header.style.display = "block";
-          requestAnimationFrame(() => {
-            header.classList.add("content-visible");
-          });
+          header.classList.add('content-visible');
         }
         if (main) {
-          main.classList.add("app-visible");
+          main.classList.add('app-visible');
         }
 
         const revealInterface = () => {
+          if (landingContentWrapper) {
+            landingContentWrapper.classList.add('hidden');
+            landingContentWrapper.style.setProperty('display', 'none', 'important')
+          }
+          if (discoverSection) {
+            discoverSection.classList.add('hidden');
+          }
+
           if (mainContent) {
-            mainContent.classList.remove("hidden");
-            mainContent.classList.add("fade-in");
-            setTimeout(() => mainContent.classList.remove("fade-in"), 500);
+            mainContent.classList.remove('hidden');
+            mainContent.classList.add('fade-in');
           }
-
-          if (landingHeaderText) {
-            landingHeaderText.classList.add("hidden");
-            landingHeaderText.setAttribute("aria-hidden", "true");
-          }
-
-          if (landingInfoRow) {
-            landingInfoRow.classList.add("hidden");
-            landingInfoRow.style.display = "none";
-            landingInfoRow.setAttribute("aria-hidden", "true");
-          }
-
-          // if (landingBackdrop) {
-          //   landingBackdrop.classList.add("is-hidden");
-          //   setTimeout(() => {
-          //     landingBackdrop.style.display = "none";
-          //   }, 600);
-          // }
-
-          if (initialPromptWrapper) {
-            initialPromptWrapper.classList.add("hidden");
-            initialPromptWrapper.style.display = "none";
-            initialPromptWrapper.setAttribute("aria-hidden", "true");
-          }
-
-          if (promptSection) {
-            promptSection.style.display = "none";
-            promptSection.setAttribute("aria-hidden", "true");
-          }
-
-          if (descriptionCard) {
-            descriptionCard.classList.add("fade-in");
-            setTimeout(() => descriptionCard.classList.remove("fade-in"), 500);
-          }
-
           if (descriptionSection) {
-            descriptionSection.classList.remove("hidden");
-            descriptionSection.classList.add("fade-in");
-            setTimeout(
-              () => descriptionSection.classList.remove("fade-in"),
-              500
-            );
+            descriptionSection.classList.remove('hidden');
           }
-
           if (postGenerateColumn) {
-            postGenerateColumn.classList.remove("hidden");
-            postGenerateColumn.classList.add("fade-in");
-            setTimeout(
-              () => postGenerateColumn.classList.remove("fade-in"),
-              500
-            );
+            postGenerateColumn.classList.remove('hidden');
           }
-
+          
           adjustEditorHeight();
+
+          // Scroll the new content into view smoothly
+          requestAnimationFrame(() => {
+            if (mainContent) {
+              mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          });
         };
 
-        if (initialPromptWrapper) {
-          initialPromptWrapper.classList.add("fade-out");
-          setTimeout(revealInterface, 350);
-        } else {
-          revealInterface();
+        // Start the fade-out animation on the initial elements
+        if (landingContentWrapper) {
+          landingContentWrapper.classList.add('fade-out');
         }
+        if (discoverSection) {
+          discoverSection.classList.add('fade-out');
+        }
+
+        // Set a timer to match the CSS transition duration (0.4s)
+        setTimeout(revealInterface, 400);
       }
+      // --- END: CORRECTED FUNCTION ---
 
       async function fetchTotalPatents() {
         showIndexedCountLoading();
@@ -2177,13 +2413,6 @@
 
         renderTerms("deviceTechTerms", sortedDeviceTerms, "device");
         renderTerms("subjectTerms", sortedSubjectTerms, "subject");
-
-        document
-          .getElementById("andOperator")
-          .classList.toggle(
-            "hidden",
-            combinedTerms.length === 0 || currentTerms.subjectTerms.length === 0
-          );
       }
 
       function createTermBadge(term) {
@@ -2310,14 +2539,13 @@
           }, 500);
         };
 
-        // This is the improved part
         input.onkeydown = (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
             const term = input.value.trim();
             if (term) {
               addRelatedTerm(term);
-              hidePopover(); // Close the popover on success
+              hidePopover();
             }
           }
         };
@@ -2577,21 +2805,10 @@
           eventSource = null;
         }
 
-        // 1. Reset status message from previous search
         searchStatusMessage.classList.add("hidden");
         searchStatusMessage.textContent = "";
 
-        // 2. Update button to show spinner and new text
         searchButton.disabled = true;
-        //       searchButton.innerHTML = `
-        //   <div class="spinner-small"></div>
-        //   <span>Loading...</span>
-        // `;
-        // Add flex styles to center the content
-        // searchButton.style.display = "flex";
-        // searchButton.style.alignItems = "center";
-        // searchButton.style.justifyContent = "center";
-        // searchButton.style.gap = "0.5rem";
 
         let searchQuery = "";
         const { deviceTerms, technologyTerms, subjectTerms } = currentTerms;
@@ -2881,7 +3098,6 @@
       }
 
       function addResult(result) {
-        // Only add the result if it meets the active score threshold
         const numericScore =
           typeof result.score === "number"
             ? result.score
@@ -2893,7 +3109,7 @@
           numericScore === undefined ||
           numericScore < scoreThreshold
         ) {
-          return false; // Indicate that the result was not added
+          return false;
         }
 
         const resultsContainer = document.getElementById("resultsContainer");
@@ -3010,6 +3226,8 @@
             generateDescription();
           }
         });
+
+      initializeDiscoverSection();
 
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fetchTotalPatents);
