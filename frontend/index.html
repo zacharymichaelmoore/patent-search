@@ -1040,7 +1040,7 @@
         color: #333333;
         font-weight: 600;
         font-family: sans-serif;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         cursor: pointer;
         transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
           transform 0.2s ease;
@@ -1565,6 +1565,7 @@
       let lastSearchQuery = "";
       let lastTopK = 100;
       let hasUnlockedInterface = false;
+      let descriptionAbortController = null;
 
       const watchDemoButton = document.getElementById("watchDemoButton");
       const videoModal = document.getElementById("videoModal");
@@ -1698,6 +1699,129 @@
         ".landing-nav__links a[href^='#']"
       );
 
+      function cancelActiveGeneration() {
+        if (descriptionAbortController) {
+          descriptionAbortController.abort();
+          descriptionAbortController = null;
+        }
+        isGeneratingDescription = false;
+        if (extractTimeout) {
+          clearTimeout(extractTimeout);
+          extractTimeout = null;
+        }
+        const generateBtn = document.getElementById("generateBtn");
+        if (generateBtn) {
+          generateBtn.disabled = false;
+          generateBtn.textContent = "Search for free";
+        }
+        const generatingIndicator = document.getElementById(
+          "generatingIndicator"
+        );
+        if (generatingIndicator) {
+          generatingIndicator.classList.add("hidden");
+          generatingIndicator.setAttribute("aria-hidden", "true");
+        }
+        const extractingIndicator = document.getElementById(
+          "extractingIndicator"
+        );
+        if (extractingIndicator) {
+          extractingIndicator.classList.add("hidden");
+        }
+      }
+
+      function cancelActiveSearch() {
+        searchCancellationRequested = true;
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        if (progressHideTimeout) {
+          clearTimeout(progressHideTimeout);
+          progressHideTimeout = null;
+        }
+        hideQueueStatus();
+        hideSearchProgress();
+        searchQueueToken = null;
+
+        const searchButton = document.getElementById("searchButton");
+        if (searchButton) {
+          restoreSearchButton(searchButton, { hideAfterRestore: true });
+        }
+
+        if (resultsContainerEl) {
+          resultsContainerEl.innerHTML = "";
+          resultsContainerEl.classList.add("hidden");
+        }
+        if (downloadButtonEl) {
+          downloadButtonEl.dataset.available = "false";
+          downloadButtonEl.classList.add("hidden");
+        }
+        if (showResultsButton) {
+          showResultsButton.dataset.available = "false";
+          showResultsButton.textContent = "Show results";
+          showResultsButton.classList.add("hidden");
+          if (
+            showResultsButtonHome &&
+            showResultsButton.parentElement !== showResultsButtonHome
+          ) {
+            showResultsButtonHome.appendChild(showResultsButton);
+          }
+        }
+        const searchStatusMessage = document.getElementById(
+          "searchStatusMessage"
+        );
+        if (searchStatusMessage) {
+          searchStatusMessage.textContent = "";
+          searchStatusMessage.classList.add("hidden");
+        }
+      }
+
+      function resetLandingInputs() {
+        const promptInput = document.getElementById("promptInput");
+        if (promptInput) {
+          promptInput.value = "";
+        }
+
+        isGeneratingDescription = true;
+        descriptionEditor.setMarkdown("", false);
+        isGeneratingDescription = false;
+        if (descriptionTextarea) {
+          descriptionTextarea.value = "";
+        }
+
+        currentTerms = {
+          deviceTerms: [],
+          technologyTerms: [],
+          subjectTerms: [],
+        };
+        scoreThreshold = 60;
+        progressTotalCandidates = null;
+        progressAnalyzedCount = 0;
+        currentProgressPercent = 0;
+        latestProgressMessage = "";
+        renderedTermNodes.device.clear();
+        renderedTermNodes.subject.clear();
+        relatedTermsCache = {};
+        lastSearchQuery = "";
+        lastTopK = 100;
+        updateQueryPreview();
+        hideTermAddButtons();
+
+        currentHoverTerm = null;
+        clearTimeout(addTermDebounceTimeout);
+        addTermDebounceTimeout = null;
+        clearTimeout(popoverTimeout);
+        popoverTimeout = null;
+        hidePopover();
+
+        const popover = document.getElementById("termPopover");
+        if (popover) {
+          popover.classList.remove("show");
+        }
+
+        adjustEditorHeight();
+      }
+
       function scrollToSelectorWithOffset(selector) {
         const targetElement = document.querySelector(selector);
         if (!targetElement) {
@@ -1715,6 +1839,10 @@
       }
 
       function restoreLandingView(afterRestore) {
+        cancelActiveGeneration();
+        cancelActiveSearch();
+        resetLandingInputs();
+
         const runAfterFrame = () => {
           if (typeof afterRestore === "function") {
             requestAnimationFrame(() => {
@@ -1971,6 +2099,7 @@
       });
       let isGeneratingDescription = false;
       let searchQueueToken = null;
+      let searchCancellationRequested = false;
 
       const queueStatusBanner = document.getElementById("queueStatusBanner");
       const queueStatusText = document.getElementById("queueStatusText");
@@ -2249,28 +2378,33 @@
           return;
         }
 
+        cancelActiveGeneration();
         showFullInterface();
-        btn.disabled = true;
-        btn.textContent = "Creating description…";
-        isGeneratingDescription = true;
-        let generatedMarkdown = "";
-        descriptionEditor.setMarkdown("", false);
-        if (descriptionTextarea) {
-          descriptionTextarea.value = "";
-        }
-        adjustEditorHeight();
-
         const indicator = document.getElementById("generatingIndicator");
         if (indicator) {
           indicator.classList.remove("hidden");
           indicator.setAttribute("aria-hidden", "false");
         }
 
+        btn.disabled = true;
+        btn.textContent = "Creating description…";
+        isGeneratingDescription = true;
+        let generatedMarkdown = "";
+        let aborted = false;
+        const controller = new AbortController();
+        descriptionAbortController = controller;
         try {
+          descriptionEditor.setMarkdown("", false);
+          if (descriptionTextarea) {
+            descriptionTextarea.value = "";
+          }
+          adjustEditorHeight();
+
           const response = await fetch(`${API_BASE}/api/generate-description`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt }),
+            signal: controller.signal,
           });
 
           if (!response.ok || !response.body) {
@@ -2290,18 +2424,25 @@
             }
             adjustEditorHeight();
           }
-          generatedMarkdown += decoder.decode();
-          descriptionEditor.setMarkdown(generatedMarkdown, false);
-          if (descriptionTextarea) {
-            descriptionTextarea.value = generatedMarkdown;
+          if (!controller.signal.aborted) {
+            generatedMarkdown += decoder.decode();
+            descriptionEditor.setMarkdown(generatedMarkdown, false);
+            if (descriptionTextarea) {
+              descriptionTextarea.value = generatedMarkdown;
+            }
+            adjustEditorHeight();
           }
-
-          isGeneratingDescription = false;
-          extractTerms(generatedMarkdown);
         } catch (err) {
-          console.error("Error:", err);
-          alert("Failed to generate description");
+          if (err && err.name === "AbortError") {
+            aborted = true;
+          } else {
+            console.error("Error:", err);
+            alert("Failed to generate description");
+          }
         } finally {
+          if (descriptionAbortController === controller) {
+            descriptionAbortController = null;
+          }
           isGeneratingDescription = false;
           btn.disabled = false;
           btn.textContent = "Search for free";
@@ -2309,6 +2450,10 @@
             indicator.classList.add("hidden");
             indicator.setAttribute("aria-hidden", "true");
           }
+        }
+
+        if (!aborted && generatedMarkdown) {
+          extractTerms(generatedMarkdown);
         }
       }
 
@@ -2917,6 +3062,8 @@
           eventSource = null;
         }
 
+        searchCancellationRequested = false;
+
         searchStatusMessage.classList.add("hidden");
         searchStatusMessage.textContent = "";
 
@@ -2967,6 +3114,10 @@
 
         resetResultsView();
 
+        if (searchCancellationRequested) {
+          return;
+        }
+
         console.log("Final Search Query:", searchQuery);
         lastSearchQuery = searchQuery;
         lastTopK = maxDisplayResults;
@@ -2975,6 +3126,10 @@
           '<div class="loading"><div class="spinner"></div><p>Searching patents...</p></div>';
         resetSearchProgress();
 
+        if (searchCancellationRequested) {
+          return;
+        }
+
         let resultCount = 0;
         let hasClearedPlaceholder = false;
         let hasCompleted = false;
@@ -2982,6 +3137,9 @@
         let queueToken = searchQueueToken;
         try {
           while (true) {
+            if (searchCancellationRequested) {
+              return;
+            }
             let response;
             try {
               response = await fetch(`${API_BASE}/api/search/enqueue`, {
@@ -2994,7 +3152,14 @@
                 }),
               });
             } catch (err) {
+              if (searchCancellationRequested) {
+                return;
+              }
               throw new Error("Unable to contact the search queue.");
+            }
+
+            if (searchCancellationRequested) {
+              return;
             }
 
             if (response.status === 429) {
@@ -3014,6 +3179,9 @@
               }
               showQueueStatus(position);
               await waitForQueueDelay(position);
+              if (searchCancellationRequested) {
+                return;
+              }
               continue;
             }
 
@@ -3035,6 +3203,9 @@
             searchQueueToken = queueToken || null;
             hideQueueStatus();
             break;
+          }
+          if (searchCancellationRequested) {
+            return;
           }
         } catch (err) {
           console.error("Failed to reserve search slot:", err);
@@ -3070,13 +3241,23 @@
           return;
         }
 
+        if (searchCancellationRequested) {
+          return;
+        }
+
         const searchUrl = `${API_BASE}/api/search?${params.toString()}`;
         eventSource = new EventSource(searchUrl);
         eventSource.onopen = () => {
+          if (searchCancellationRequested) {
+            return;
+          }
           hideQueueStatus();
         };
 
         eventSource.addEventListener("log", (event) => {
+          if (searchCancellationRequested) {
+            return;
+          }
           try {
             const data = JSON.parse(event.data || "{}");
             updateSearchProgressFromLog(data.message || "");
@@ -3086,6 +3267,9 @@
         });
 
         eventSource.addEventListener("result", (event) => {
+          if (searchCancellationRequested) {
+            return;
+          }
           try {
             const data = JSON.parse(event.data || "{}");
             const resultPayload = data.result;
@@ -3113,6 +3297,9 @@
         });
 
         eventSource.addEventListener("complete", (event) => {
+          if (searchCancellationRequested) {
+            return;
+          }
           if (hasCompleted) return;
           hasCompleted = true;
 
@@ -3175,6 +3362,9 @@
         });
 
         eventSource.onerror = (event) => {
+          if (searchCancellationRequested) {
+            return;
+          }
           if (hasCompleted) return;
           console.error("Search stream error:", event);
           hideSearchProgress();
