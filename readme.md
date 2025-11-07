@@ -38,7 +38,7 @@ It downloads the file, then unzips everything and then removes everything except
 
 ---
 
-## Fresh VM
+## Setting this up in a VM
 
 1. **Clone repo & enter workspace**
    ```bash
