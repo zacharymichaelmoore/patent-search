@@ -120,7 +120,7 @@ ReDoc at `http://<host>/redoc`
 1. **Copy the embedding model once**  
    ```bash
    scp -r -i ~/.ssh/google_compute_engine \
-     <USER>@<SERVER_ADDRESS>:/home/<USER>/patent-search/api/models/all-MiniLM-L6-v2 \
+     <USER>@<host>:/home/<USER>/patent-search/api/models/all-MiniLM-L6-v2 \
      /Users/<USER>/Documents/GitHub/patent-search/api/models/
    ```
 
@@ -129,7 +129,7 @@ ReDoc at `http://<host>/redoc`
    ssh -i ~/.ssh/google_compute_engine \
        -L 6333:localhost:6333 \
        -L 11434:localhost:11434 \
-       <USER>@<SERVER_ADDRESS>
+       <USER>@<host>
    ```
    Leave this terminal open for the entire session.
 
