@@ -1,4 +1,4 @@
-# README
+# HOW IT WORKS
 
 ## System
 
