@@ -120,8 +120,8 @@ ReDoc at `http://<host>/redoc`
 1. **Copy the embedding model once**  
    ```bash
    scp -r -i ~/.ssh/google_compute_engine \
-     zacharymoore@34.182.86.63:/home/zacharymoore/patent-search/api/models/all-MiniLM-L6-v2 \
-     /Users/zacharymoore/Documents/GitHub/patent-search/api/models/
+     <USER>@<SERVER_ADDRESS>:/home/<USER>/patent-search/api/models/all-MiniLM-L6-v2 \
+     /Users/<USER>/Documents/GitHub/patent-search/api/models/
    ```
 
 2. **Open an SSH tunnel to Qdrant and Ollama**  
@@ -129,7 +129,7 @@ ReDoc at `http://<host>/redoc`
    ssh -i ~/.ssh/google_compute_engine \
        -L 6333:localhost:6333 \
        -L 11434:localhost:11434 \
-       zacharymoore@34.182.86.63
+       <USER>@<SERVER_ADDRESS>
    ```
    Leave this terminal open for the entire session.
 
